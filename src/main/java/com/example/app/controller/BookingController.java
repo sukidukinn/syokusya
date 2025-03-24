@@ -5,12 +5,16 @@ import java.util.List;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.Errors;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import com.example.app.domain.BookingFormItem;
 import com.example.app.domain.RoomType;
+
+import jakarta.validation.Valid;
 
 @Controller
 @RequestMapping("/booking")
@@ -28,10 +32,16 @@ public class BookingController {
 
 	@PostMapping
 	public String bookingPost(
-			BookingFormItem bookingFormItem,
+			@Valid BookingFormItem bookingFormItem,
+			Errors errors,
 			Model model) {
-		// 施設利用規約への同意がされていない場合、フォームを再表示
-		if (!bookingFormItem.getAgreement()) {
+		// バリデーションエラーの場合、フォームを再表示
+		if (errors.hasErrors()) {
+			// エラー内容の捕捉
+			List<ObjectError> objList = errors.getAllErrors();
+			for (ObjectError obj : objList) {
+				System.out.println(obj.toString());
+			}
 			model.addAttribute("roomTypeList", getRoomTypeList());
 			return "booking";
 		}
