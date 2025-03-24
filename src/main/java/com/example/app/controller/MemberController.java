@@ -47,7 +47,7 @@ public class MemberController {
 			return "login";
 		}
 		// 未入力でない場合、ID とパスワードをチェック
-		if (!loginMember.getEmail().equals("taro@example.com")
+		if (!loginMember.getEmail().equals("taro")
 				|| !loginMember.getPassword().equals("abcd")) {
 			// グローバルエラーの追加
 			errors.reject("error.wrong_id_or_password");
