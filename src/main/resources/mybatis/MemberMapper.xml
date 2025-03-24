@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.app.mapper.MemberMapper">
+	<select id="selectMembers"
+		resultType="com.example.app.domain.Member">
+		SELECT * FROM members
+	</select>
+	<insert id="addMember"
+		parameterType="com.example.app.domain.Member">
+		INSERT INTO members (name, age, address, type_id, created)
+		VALUES (#{name}, #{age}, #{address}, #{typeId}, NOW())
+	</insert>
+</mapper>

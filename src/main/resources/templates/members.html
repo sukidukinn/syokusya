@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8">
+	<title>会員一覧</title>
+</head>
+
+<body>
+	<h1>会員一覧</h1>
+	<p><a th:href="@{/add}">会員の追加</a></p>
+	<table border="1">
+		<tr>
+			<th>ID</th>
+			<th>氏名</th>
+			<th>年齢</th>
+			<th>住所</th>
+			<th>会員種別<br>(1:通常 2:プレミアム)</th>
+			<th>登録日</th>
+		</tr>
+		<tr th:each="member : ${members}">
+			<td>[[${member.id}]]</td>
+			<td>[[${member.name}]]</td>
+			<td>[[${member.age}]]</td>
+			<td>[[${member.address}]]</td>
+			<td>[[${member.typeId}]]</td>
+			<td>[[${#temporals.format(member.created,
+				'yyyy 年 MM 月 dd 日 HH:mm:ss')}]]</td>
+		</tr>
+	</table>
+</body>
+
+</html>

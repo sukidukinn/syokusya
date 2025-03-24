@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8">
+	<title>お知らせの追加</title>
+	<link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+	<link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+
+<body>
+	<div class="container">
+		<h1 class="my-4">お知らせの追加</h1>
+		<form action="" method="post" th:object="${newsForm}" enctype="multipart/form-data" id="form">
+
+			<span th:errors="*{title}" class="error"></span>
+			<p class="mt-2">タイトル：<input type="text" th:field="*{title}"></p>
+			<span th:errors="*{postDate}" class="error"></span>
+			<p class="mt-2">掲載日：<input type="date" th:field="*{postDate}"></p>
+			<p class="news_target">対象を限定する場合は☑：
+				<th:block th:each="type : ${memberTypeList}">
+					<label>
+						<input type="checkbox" th:field="*{targetIdList}" th:value="${type.id}">
+						[[${type.name}]]
+					</label>
+				</th:block>
+			</p>
+			<span th:errors="*{article}" class="error"></span>
+			<p class="mt-2">内容：<br>
+				<textarea th:field="*{article}" cols="40" rows="5"></textarea>
+				<span th:errors="*{upfile}" class="error"></span>
+			<p class="mt-2">イメージ画像：<input type="file" th:field="*{upfile}" id="upfile"></p>
+			<input class="btn btn-primary" type="submit">
+		</form>
+		<p class="mt-4"><a th:href="@{/news}">一覧に戻る</a></p>
+	</div>
+	<script>
+		const MAX_FILE_SIZE = 10000000; // 10MB
+		const form = document.getElementById('form');
+		const upfile = document.getElementById('upfile');
+		form.addEventListener('submit', (event) => {
+			const file = upfile.files[0];
+			if (file != undefined && file.size >= MAX_FILE_SIZE) {
+				// 送信しない
+				event.preventDefault();
+				// エラーメッセージを含む span 要素を生成
+				const errorElement = document.createElement('span');
+				errorElement.classList.add('error');
+				errorElement.textContent = 'ファイルサイズが大き過ぎます';
+				// input タグの親要素(p 要素)の前にメッセージを出力
+				upfile.parentNode.before(errorElement);
+			}
+		});
+	</script>
+</body>
+
+</html>

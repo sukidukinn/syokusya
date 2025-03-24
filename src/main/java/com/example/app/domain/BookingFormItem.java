@@ -1,6 +1,5 @@
 package com.example.app.domain;
 
-
 import java.time.LocalDate;
 import java.util.List;
 
