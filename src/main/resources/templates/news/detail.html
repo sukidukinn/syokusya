@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8">
+	<title>お知らせ詳細</title>
+	<link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+</head>
+
+<body>
+	<div class="container">
+		<h1 class="mt-4">お知らせ詳細</h1>
+		<p>
+			<a class="mt-4 btn btn-primary" th:href="@{/news}">一覧に戻る</a>
+		</p>
+		<table class="table">
+			<tr>
+				<th>ID</th>
+				<td>[[${news.id}]]</td>
+			</tr>
+			<tr>
+				<th>投稿者</th>
+				<td>[[${news.author}]]</td>
+			</tr>
+			<!-- お知らせの配信対象が限定される場合:start -->
+			<tr th:if="${!news.targetList.isEmpty()}">
+				<th>配信の対象</th>
+				<td>
+					<p th:each="target : ${news.targetList}">[[${target.name}]]</p>
+				</td>
+			</tr>
+			<!-- お知らせの配信対象が限定される場合:end -->
+			<tr>
+				<th>タイトル</th>
+				<td>[[${news.title}]]</td>
+			</tr>
+			<tr>
+				<th>掲載日</th>
+				<td>[[${#temporals.format(news.postDate, 'yyyy年MM月dd日')}]]</td>
+			</tr>
+			<tr>
+				<th>内容</th>
+				<td>[[${news.detail.article}]]</td>
+			</tr>
+			<!-- イメージ画像がある場合:start -->
+			<tr th:if="${news.detail.photo}">
+				<th>イメージ画像</th>
+				<td><img th:src="@{/uploads/{img}(img=${news.detail.photo})}"></td>
+			</tr>
+			<!-- イメージ画像がある場合:end -->
+		</table>
+	</div>
+</body>
+
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8">
+	<title>会員管理システム</title>
+	<link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+	<link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+
+<body>
+	<div class="text-center mt-4">
+		<h1>会員管理システム</h1>
+		<th:block th:if="${session.loginId}">
+			<a class="btn btn-primary btn-lg mt-4 mr-2" th:href="@{/members}">会員
+				一覧</a>
+			<a class="btn btn-primary btn-lg mt-4 ml-2" th:href="@{/news}">お知らせ
+				一覧</a>
+		</th:block>
+		<th:block th:unless="${session.loginId}">
+			<form class="mt-4" action="" method="post" th:object="${admin}">
+				<span th:errors="*{loginId}" class="error"></span>
+				<p class="mt-2">ログイン ID：
+					<input type="text" th:field="*{loginId}">
+				</p>
+				<p>パスワード：<input type="password" th:field="*{loginPass}"></p>
+				<input class="btn btn-primary" type="submit" value="ログイン">
+			</form>
+		</th:block>
+	</div>
+</body>
+
+</html>
