@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.app.mapper.MealPostMapper">
+
+	<select id="findByUserId" parameterType="int"
+		resultType="com.example.app.domain.MealPost">
+		SELECT *
+		FROM meal_posts
+		WHERE user_id = #{userId}
+		AND deleted = FALSE
+		ORDER BY meal_time DESC
+	</select>
+	
+	<!-- 一覧取得 -->
+	<select id="selectAll" resultType="MealPost">
+		SELECT
+		id,
+		user_id,
+		meal_name,
+		meal_time,
+		photo_path,
+		memo,
+		total_calorie,
+		total_grams,
+		protein_g,
+		fat_g,
+		carbohydrate_g,
+		fiber_g,
+		salt_g,
+		cholesterol_mg,
+		created
+		FROM meal_posts
+		WHERE deleted = FALSE
+	</select>
+
+	<!-- IDによる取得 -->
+	<select id="selectById" parameterType="int"
+		resultType="MealPost">
+		SELECT *
+		FROM meal_posts
+		WHERE id = #{id} AND deleted = false
+	</select>
+
+	<!-- 新規登録 -->
+	<insert id="insert" parameterType="MealPost">
+		INSERT INTO meal_posts (
+		user_id, meal_name, meal_time, photo_path, memo,
+		total_calorie,
+		total_grams,
+		protein_g, fat_g, carbohydrate_g,
+		fiber_g, salt_g, cholesterol_mg,
+		created
+		) VALUES
+		(
+		#{userId}, #{mealName}, #{mealTime}, #{photoPath},
+		#{memo},
+		#{totalCalorie}, #{totalGrams}, #{proteinG}, #{fatG},
+		#{carbohydrateG},
+		#{fiberG}, #{saltG}, #{cholesterolMg}, NOW()
+		)
+	</insert>
+
+	<!-- 更新 -->
+	<update id="update" parameterType="MealPost">
+		UPDATE meal_posts
+		SET
+		user_id =
+		#{userId},
+		meal_name = #{mealName},
+		meal_time = #{mealTime},
+		photo_path =
+		#{photoPath},
+		memo = #{memo},
+		total_calorie = #{totalCalorie},
+		total_grams = #{totalGrams},
+		protein_g = #{proteinG},
+		fat_g = #{fatG},
+		carbohydrate_g = #{carbohydrateG},
+		fiber_g = #{fiberG},
+		salt_g =
+		#{saltG},
+		cholesterol_mg = #{cholesterolMg}
+		WHERE id = #{id}
+	</update>
+	<update id="softDeleteById" parameterType="int">
+		UPDATE meal_posts SET
+		deleted = true WHERE id = #{id}
+	</update>
+	<!-- 削除 -->
+	<delete id="delete" parameterType="int">
+		DELETE FROM meal_posts WHERE
+		id = #{id}
+	</delete>
+
+</mapper>

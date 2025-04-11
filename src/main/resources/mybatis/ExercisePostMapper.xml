@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.app.mapper.ExercisePostMapper">
+
+	<select id="findAll"
+		resultType="com.example.app.domain.ExercisePost">
+		SELECT * FROM exercise_posts WHERE deleted = FALSE ORDER BY
+		exercise_time
+		DESC
+	</select>
+
+	<select id="findByUserId"
+		resultType="com.example.app.domain.ExercisePost">
+		SELECT * FROM exercise_posts WHERE user_id = #{userId} AND
+		deleted = FALSE
+		ORDER BY exercise_time DESC
+	</select>
+
+	<select id="selectById"
+		resultType="com.example.app.domain.ExercisePost">
+		SELECT * FROM exercise_posts WHERE id = #{id}
+	</select>
+
+	<insert id="insert" parameterType="ExercisePost"
+		useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO exercise_posts (
+		user_id, exercise_name, body_part,
+		duration_minutes, repetition_count,
+		set_count,
+		intensity_level, calorie_burned, memo,
+		exercise_time,
+		photo_path, deleted, created
+		) VALUES (
+		#{userId}, #{exerciseName},
+		#{bodyPart},
+		#{durationMinutes}, #{repetitionCount}, #{setCount},
+		#{intensityLevel}, #{calorieBurned}, #{memo},
+		#{exerciseTime},
+		#{photoPath}, FALSE, NOW()
+		)
+	</insert>
+
+	<update id="update" parameterType="ExercisePost">
+		UPDATE exercise_posts
+		SET
+		exercise_name = #{exerciseName},
+		body_part = #{bodyPart},
+		duration_minutes = #{durationMinutes},
+		repetition_count = #{repetitionCount},
+		set_count = #{setCount},
+		intensity_level = #{intensityLevel},
+		calorie_burned = #{calorieBurned},
+		memo = #{memo},
+		exercise_time = #{exerciseTime},
+		photo_path = #{photoPath},
+		deleted = #{deleted},          <!-- ✅ これが必要です -->
+		updated = NOW()
+		WHERE id = #{id}
+	</update>
+
+	<update id="delete" parameterType="int">
+		UPDATE exercise_posts SET
+		deleted = TRUE WHERE id = #{id}
+	</update>
+
+</mapper>

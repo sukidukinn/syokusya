@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<link rel="icon" type="image/x-icon" th:href="@{/favicon.ico}">
+	<meta charset="UTF-8">
+	<title>食写一覧</title>
+	<link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+	<style>
+		/* FullCalendarのイベントコンテナでスクロール無効化 */
+		.fc-event-container {
+			overflow: visible !important;
+		}
+
+		.smaller-text {
+			font-size: 0.85rem;
+		}
+
+		.meal-table-wrapper {
+			max-width: 1400px;
+			/* ✅ 横幅の上限を指定 */
+			margin: 0 auto;
+			/* ✅ 中央寄せ */
+			padding: 1rem;
+			overflow-x: auto;
+			/* ✅ スマホで横スクロール可 */
+		}
+
+		.meal-table {
+			border-collapse: collapse;
+			width: 100%;
+			table-layout: auto;
+		}
+
+		.meal-table th,
+		.meal-table td {
+			padding: 6px 8px;
+			text-align: center;
+			word-break: break-word;
+			white-space: normal;
+		}
+
+		.meal-table img {
+			max-width: 100%;
+			height: auto;
+			display: block;
+			margin: 0 auto;
+		}
+
+		.bg-morning {
+			background-color: #e0f7fa;
+		}
+
+		.bg-lunch {
+			background-color: #fff3e0;
+		}
+
+		.bg-dinner {
+			background-color: #AAAAFF;
+		}
+
+		.bg-late-night {
+			background-color: #8888ff;
+		}
+
+		.meal-table th {
+			background-color: #f0f0f0;
+			/* 明るいグレー */
+			font-weight: bold;
+			border-top: 2px solid #888;
+			border-bottom: 2px solid #888;
+			text-align: center;
+		}
+
+		.meal-table th,
+		.meal-table td {
+			padding: 0.5rem 0.75rem;
+			vertical-align: middle;
+			border: 1px solid #ccc;
+		}
+
+		@media screen and (max-width: 1000px) {
+			.meal-table th:nth-child(5),
+			.meal-table th:nth-child(7),
+			.meal-table th:nth-child(8),
+			.meal-table th:nth-child(9),
+			.meal-table th:nth-child(10),
+			.meal-table th:nth-child(11),
+			.meal-table th:nth-child(12),
+			.meal-table th:nth-child(13),
+
+			.meal-table td:nth-child(5),
+			.meal-table td:nth-child(7),
+			.meal-table td:nth-child(8),
+			.meal-table td:nth-child(9),
+			.meal-table td:nth-child(10),
+			.meal-table td:nth-child(11),
+			.meal-table td:nth-child(12),
+			.meal-table td:nth-child(13) {
+				display: none;
+			}
+		}
+
+		#fixed-header {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			z-index: 1030;
+			/* Bootstrapのnavbarと同等 */
+			background-color: #fff;
+			border-bottom: 1px solid #ccc;
+		}
+
+		/* 本文がヘッダーにかぶらないように余白追加 */
+		body {
+			padding-top: 110px;
+			/* headerの高さに合わせて調整 */
+		}
+	</style>
+	<link rel='stylesheet' href='/webjars/fullcalendar/3.10.2/dist/fullcalendar.css' />
+</head>
+
+<body>
+	<div id="fixed-header" class="d-flex align-items-center justify-content-between px-4">
+		<div class="d-flex align-items-center gap-4 flex-wrap">
+			<img th:if="${session.loginUser.photoPath != null}"
+				th:src="@{'/uploads/' + ${#strings.substringAfter(session.loginUser.photoPath, 'uploads/')}}"
+				alt="プロフィール画像" width="50" height="50" class="rounded-circle border" />
+			<span>[[${session.loginUser.nickname}]] さん！ 今日も頑張りましょう！</span>
+			<span>🔥TDEE: <strong>[[${session.loginUser.tdee}]]</strong>kcal</span>
+		</div>
+		<div class="d-flex align-items-center gap-2">
+			<a class="btn btn-sm btn-outline-secondary" th:href="@{/profile}">プロフィール</a>
+			<a class="btn btn-sm btn-secondary" th:href="@{/logout}">ログアウト</a>
+		</div>
+	</div>
+
+
+	<div class="container">
+		<div class="alert alert-info">
+			<p>
+				🎯 目標体重: <strong>[[${session.loginUser.goalWeightKg}]]</strong> kg<br>
+				📊 理想体重 (BMI22): <strong>[[${session.loginUser.idealWeightKg}]]</strong> kg<br>
+				📉 現在との差分: <strong>[[${session.loginUser.weightDiffKg}]]</strong> kg
+			</p>
+
+			<p>
+				🔥 基礎代謝 (BMR): <strong>[[${session.loginUser.bmr}]]</strong> kcal<br>
+				🚶‍♂️ 総消費カロリー (TDEE): <strong class="text-danger">[[${session.loginUser.tdee}]]</strong> kcal
+			</p>
+
+			<p>
+				🥗 目標摂取カロリー: <strong>[[${session.loginUser.calorieGoal}]]</strong> kcal<br>
+				🍽️ 本日の摂取合計: <strong th:text="${totalCalorie}">0</strong> kcal
+			</p>
+
+			<p>
+				📆 減量開始日: <strong>[[${session.loginUser.startDate}]]</strong><br>
+				🎯 目標達成日: <strong>[[${session.loginUser.goalDate}]]</strong><br>
+				🗓️ 目標日数: <strong>[[${session.loginUser.targetDays}]]</strong> 日
+			</p>
+
+			<p th:if="${totalCalorie > session.loginUser.tdee}" class="text-danger fw-bold">
+				⚠️ 本日の摂取カロリーがTDEEを超えています！
+			</p>
+			<p th:unless="${totalCalorie > session.loginUser.tdee}" class="text-success fw-bold">
+				✅ 本日の摂取カロリーは目標内です！
+			</p>
+		</div>
+
+		<!-- カレンダーの表示 -->
+		<div class="container mt-4">
+			<div id="calendar"></div>
+		</div>
+
+		<!-- FullCalendar JSライブラリ -->
+		<script src="/webjars/jquery/3.6.4/jquery.min.js"></script>
+		<script src="/webjars/moment/2.29.1/min/moment.min.js"></script>
+		<script src="/webjars/fullcalendar/3.10.2/dist/fullcalendar.js"></script>
+
+
+		<div class="d-flex justify-content-between align-items-center mt-4">
+			<h3 class="mb-0">エクササイズ一覧</h3>
+			<a class="btn btn-outline-success" th:href="@{/exercisePosts/add}">＋エクササイズ投稿</a>
+		</div>
+		<table class="table table-striped">
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>運動名</th>
+					<th>運動部位</th>
+					<th>運動時間</th>
+					<th>消費カロリー</th>
+					<th>回数</th>
+					<th>セット</th>
+					<th>メモ</th>
+					<th>写真</th>
+					<th colspan="2">操作</th>
+				</tr>
+			</thead>
+			<tbody id="exercisePostsBody"></tbody>
+		</table>
+		<div id="exercisePaginationControls" class="mt-3 d-flex justify-content-center"></div>
+
+		<div class="d-flex justify-content-between align-items-center mt-4">
+			<h3 class="mb-0">食事一覧</h3>
+			<a class="mt-4 btn btn-primary" th:href="@{/mealPosts/add}">＋ 食事投稿の追加</a>
+		</div>
+		<div class="meal-table-wrapper">
+			<table class="table meal-table">
+				<tr>
+					<th>ID</th>
+					<th>食事名</th>
+					<th>食事時間</th>
+					<th>写真</th>
+					<th>メモ</th>
+					<th class="smaller-text">カロリー(kcal)</th>
+					<th class="smaller-text">たんぱく質(g)</th>
+					<th class="smaller-text">脂質(g)</th>
+					<th class="smaller-text">炭水化物(g)</th>
+					<th class="smaller-text">食物繊維(g)</th>
+					<th class="smaller-text">塩分(g)</th>
+					<th class="smaller-text">コレステロール(mg)</th>
+					<th>登録日時</th>
+					<th colspan="2">操作</th>
+				</tr>
+				<tbody id="mealPostsBody"></tbody>
+			</table>
+		</div>
+		<div id="mealPaginationControls" class="d-flex justify-content-center mt-3"></div>
+
+		<!-- 削除モーダル -->
+		<div class="modal fade" id="confirm-modal" tabindex="-1" aria-hidden="true">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">確認</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+					</div>
+					<div class="modal-body">
+						「<span id="delete-name"></span>」を削除します。よろしいですか？
+					</div>
+					<div class="modal-footer">
+						<a id="delete-yes" class="btn btn-danger">はい</a>
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">いいえ</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="modal fade" id="confirm-modal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">会員情報の削除</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+					<div class="modal-body">
+						「<span id="delete-name"></span>」を削除します。よろしいですか？
+					</div>
+					<div class="modal-footer">
+						<a class="btn btn-danger" id="delete-yes">はい</a>
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">いいえ</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="modal fade" id="confirmExerciseDeleteModal" tabindex="-1" aria-labelledby="confirmModalLabel"
+			aria-hidden="true">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">削除確認</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+					</div>
+					<div class="modal-body">
+						「<span id="exercise-delete-name"></span>」のエクササイズ投稿を削除します。よろしいですか？
+					</div>
+					<div class="modal-footer">
+						<a class="btn btn-danger" id="exercise-delete-yes">はい</a>
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">いいえ</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+
+		<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+
+		<script th:inline="javascript">
+			const columnWidths = [
+				"50px",   // ID
+				"160px",  // 食事名
+				"150px",  // 食事時間
+				"100px",  // 写真
+				"180px",  // メモ
+				"80px",  // カロリー
+				"80px",  // たんぱく質
+				"80px",  // 脂質
+				"80px",  // 炭水化物
+				"80px",  // 食物繊維
+				"80px",  // 塩分
+				"100px",  // コレステロール
+				"150px",  // 登録日時
+				"80px",   // 編集
+				"80px"    // 削除
+			];
+			function renderMealPosts(posts) {
+				tbody.innerHTML = "";
+
+				posts.forEach(post => {
+					const mealTime = post.mealTime?.substring(0, 16) ?? "";
+					const hour = mealTime.substring(11, 13);
+					const tr = document.createElement("tr");
+					tr.className = getMealTimeClass(hour);
+
+					const imageHtml = post.photoPath
+						? `<img src="/${post.photoPath}" width="80" height="80">`
+						: `画像なし`;
+
+					const tdValues = [
+						post.id, post.mealName, mealTime, imageHtml,
+						post.memo ?? "",
+						post.totalCalorie ?? 0,
+						post.proteinG ?? 0,
+						post.fatG ?? 0,
+						post.carbohydrateG ?? 0,
+						post.fiberG ?? 0,
+						post.saltG ?? 0,
+						post.cholesterolMg ?? 0,
+						post.created?.substring(0, 16) ?? "",
+						`<a href="/mealPosts/edit/${post.id}" class="btn btn-primary btn-sm">編集</a>`,
+						`<button class="btn btn-danger btn-sm delete" 
+				data-name="${post.mealName}" 
+				data-href="/mealPosts/delete/${post.id}" 
+				data-bs-toggle="modal" 
+				data-bs-target="#confirm-modal">削除</button>`
+					];
+
+					tdValues.forEach((val) => {
+						const td = document.createElement("td");
+						td.innerHTML = val;
+						tr.appendChild(td);
+					});
+
+					tbody.appendChild(tr);
+				});
+			}
+
+			const mealPosts = /*[[${mealPosts}]]*/[];
+			const tbody = document.getElementById("mealPostsBody");
+
+			function getMealTimeClass(hourStr) {
+				const hour = parseInt(hourStr, 10);
+				if (hour >= 5 && hour < 11) return 'bg-morning';
+				if (hour >= 11 && hour < 15) return 'bg-lunch';
+				if (hour >= 15 && hour < 22) return 'bg-dinner';
+				return 'bg-late-night';
+			}
+			function renderMealPostRow(post) {
+				const tr = document.createElement("tr");
+				const hour = new Date(post.mealTime).getHours();
+				tr.classList.add(getMealTimeClass(hour));
+
+				const imgHtml = post.photoPath
+					? `<img src="/${post.photoPath}" width="80" height="80" />`
+					: "画像なし";
+
+				tr.innerHTML = `
+		<td>${post.id}</td>
+		<td>${post.mealName}</td>
+		<td>${formatDate(post.mealTime)}</td>
+		<td>${imgHtml}</td>
+		<td>${post.memo}</td>
+		<td>${post.totalCalorie}</td>
+		<td>${post.proteinG}</td>
+		<td>${post.fatG}</td>
+		<td>${post.carbohydrateG}</td>
+		<td>${post.fiberG}</td>
+		<td>${post.saltG}</td>
+		<td>${post.cholesterolMg}</td>
+		<td>${formatDate(post.created)}</td>
+		<td><a class="btn btn-primary" href="/mealPosts/edit/${post.id}">編集</a></td>
+		<td><button class="btn btn-danger" onclick="deletePost(${post.id}, '${post.mealName}')">削除</button></td>
+	`;
+				document.getElementById("mealPostsBody").appendChild(tr);
+			}
+			function renderMealPosts(posts) {
+				tbody.innerHTML = "";
+
+				posts.forEach(post => {
+					const mealTime = post.mealTime?.substring(0, 16) ?? "";
+					const hour = mealTime.substring(11, 13);
+					const tr = document.createElement("tr");
+					tr.className = getMealTimeClass(hour);
+
+					const mealTimeDate = new Date(post.mealTime);
+					const mealTime2 = `${mealTimeDate.getFullYear()}/${mealTimeDate.getMonth() + 1}/${mealTimeDate.getDate()}<br>` +
+						`${String(mealTimeDate.getHours()).padStart(2, '0')}:${String(mealTimeDate.getMinutes()).padStart(2, '0')}:${String(mealTimeDate.getSeconds()).padStart(2, '0')}`;
+					const postCreated = new Date(post.mealTime);
+					const postCreated2 = `${postCreated.getFullYear()}/${postCreated.getMonth() + 1}/${postCreated.getDate()}<br>` +
+						`${String(postCreated.getHours()).padStart(2, '0')}:${String(postCreated.getMinutes()).padStart(2, '0')}:${String(postCreated.getSeconds()).padStart(2, '0')}`;
+
+					const imageHtml = post.photoPath
+						? `<img src="/${post.photoPath}" width="80" height="80" alt="食事写真">`
+						: `<span>画像なし</span>`;
+
+					tr.innerHTML = `
+				<td>${post.id}</td>
+				<td>${post.mealName}</td>
+				<td>${mealTime2}</td>
+				<td>${imageHtml}</td>
+				<td>${post.memo ?? ""}</td>
+				<td>${post.totalCalorie ?? 0}</td>
+				<td>${post.proteinG ?? 0}</td>
+				<td>${post.fatG ?? 0}</td>
+				<td>${post.carbohydrateG ?? 0}</td>
+				<td>${post.fiberG ?? 0}</td>
+				<td>${post.saltG ?? 0}</td>
+				<td>${post.cholesterolMg ?? 0}</td>
+				<td>${postCreated2 ?? ""}</td>
+				<td><a href="/mealPosts/edit/${post.id}" class="btn btn-primary">編集</a></td>
+				<td>
+					<button class="btn btn-danger delete" 
+						data-name="${post.mealName}" 
+						data-href="/mealPosts/delete/${post.id}" 
+						data-bs-toggle="modal" 
+						data-bs-target="#confirm-modal">
+						削除
+					</button>
+				</td>
+			`;
+					tbody.appendChild(tr);
+				});
+			}
+
+			window.addEventListener("DOMContentLoaded", () => {
+				renderMealPosts(mealPosts);
+
+				// 削除ボタンイベント
+				document.addEventListener("click", e => {
+					if (e.target.classList.contains("delete")) {
+						document.getElementById("delete-name").textContent = e.target.dataset.name;
+						document.getElementById("delete-yes").setAttribute("href", e.target.dataset.href);
+					}
+				});
+			});
+
+			// テーブルヘッダーに幅を反映
+			window.addEventListener("DOMContentLoaded", () => {
+				const headerCells = document.querySelectorAll(".meal-table th");
+				headerCells.forEach((th, index) => {
+					if (columnWidths[index]) {
+						th.style.width = columnWidths[index];
+					}
+				});
+			});
+
+			// 各行のtdに幅を反映（行が追加された時に呼ぶ）
+			function applyColumnWidthsToRow(tr) {
+				const cells = tr.querySelectorAll("td");
+				cells.forEach((td, index) => {
+					if (columnWidths[index]) {
+						td.style.width = columnWidths[index];
+					}
+				});
+			}
+		</script>
+		<script th:inline="javascript">
+			const itemsPerPage = 5;
+			let currentPage = 1;
+
+			const allMealPosts = /*[[${mealPosts}]]*/[];
+
+			function renderMealPostPage(page = 1) {
+				const tbody = document.getElementById("mealPostsBody");
+				tbody.innerHTML = "";
+
+				const totalPages = Math.ceil(allMealPosts.length / itemsPerPage);
+				currentPage = Math.min(Math.max(1, page), totalPages);
+
+				const start = (currentPage - 1) * itemsPerPage;
+				const pageData = allMealPosts.slice(start, start + itemsPerPage);
+
+				pageData.forEach(post => {
+					const tr = document.createElement("tr");
+
+					// 時間帯背景色の計算
+					const hour = parseInt(post.mealTime?.substring(11, 13));
+					if (hour >= 5 && hour < 11) tr.classList.add("bg-morning");
+					else if (hour >= 11 && hour < 15) tr.classList.add("bg-lunch");
+					else if (hour >= 15 && hour < 22) tr.classList.add("bg-dinner");
+					else tr.classList.add("bg-late-night");
+
+					// 日時表示整形
+					const [date, time] = post.mealTime?.split("T") ?? ["", ""];
+					const mealTime = `${date.replace(/-/g, "/")}<br>${time}`;
+
+					const [date2, time2] = post.created?.split("T") ?? ["", ""];
+					const createdTime2 = `${date2.replace(/-/g, "/")}<br>${time2}`;
+
+					const imageHtml = post.photoPath
+						? `<img src="/${post.photoPath}" width="80" height="80" alt="写真">`
+						: `画像なし`;
+
+					tr.innerHTML = `
+				<td>${post.id}</td>
+				<td>${post.mealName}</td>
+				<td class="smaller-text">${mealTime}</td>
+				<td>${imageHtml}</td>
+				<td>${post.memo ?? ""}</td>
+				<td class="smaller-text">${post.totalCalorie ?? 0}</td>
+				<td class="smaller-text">${post.proteinG ?? 0}</td>
+				<td class="smaller-text">${post.fatG ?? 0}</td>
+				<td class="smaller-text">${post.carbohydrateG ?? 0}</td>
+				<td class="smaller-text">${post.fiberG ?? 0}</td>
+				<td class="smaller-text">${post.saltG ?? 0}</td>
+				<td class="smaller-text">${post.cholesterolMg ?? 0}</td>
+				<td class="smaller-text">${createdTime2}</td>
+				<td><a href="/mealPosts/edit/${post.id}" class="btn btn-primary">編集</a></td>
+				<td>
+					<button class="btn btn-danger delete" 
+						data-name="${post.mealName}" 
+						data-href="/mealPosts/delete/${post.id}" 
+						data-bs-toggle="modal" 
+						data-bs-target="#confirm-modal">
+						削除
+					</button>
+				</td>
+			`;
+					tbody.appendChild(tr);
+				});
+
+				renderMealPaginationControls(totalPages);
+			}
+
+			function renderMealPaginationControls(totalPages) {
+				const container = document.getElementById("mealPaginationControls");
+				container.innerHTML = "";
+
+				if (totalPages <= 1) return;
+
+				const ul = document.createElement("ul");
+				ul.className = "pagination";
+
+				ul.appendChild(createPageButton("«", currentPage > 1, () => renderMealPostPage(currentPage - 1)));
+
+				for (let i = 1; i <= totalPages; i++) {
+					if (i === 1 || i === totalPages || Math.abs(currentPage - i) <= 2) {
+						ul.appendChild(createPageButton(i, true, () => renderMealPostPage(i), i === currentPage));
+					} else if (i === currentPage - 3 || i === currentPage + 3) {
+						const li = document.createElement("li");
+						li.className = "page-item disabled";
+						li.innerHTML = `<span class="page-link">…</span>`;
+						ul.appendChild(li);
+					}
+				}
+
+				ul.appendChild(createPageButton("»", currentPage < totalPages, () => renderMealPostPage(currentPage + 1)));
+
+				container.appendChild(ul);
+			}
+
+			function createPageButton(label, enabled, onClick, active = false) {
+				const li = document.createElement("li");
+				li.className = `page-item ${!enabled ? "disabled" : ""} ${active ? "active" : ""}`;
+
+				const a = document.createElement("a");
+				a.className = "page-link";
+				a.href = "#";
+				a.textContent = label;
+
+				if (enabled) {
+					a.addEventListener("click", e => {
+						e.preventDefault();
+						onClick();
+					});
+				}
+
+				li.appendChild(a);
+				return li;
+			}
+
+			// 初期表示
+			window.addEventListener("DOMContentLoaded", () => {
+				renderMealPostPage();
+			});
+		</script>
+
+		<script th:inline="javascript">
+			const exerciseItemsPerPage = 5;
+			let exerciseCurrentPage = 1;
+
+			const allExercisePosts = /*[[${exercisePosts}]]*/[];
+
+			function renderExercisePage(page = 1) {
+				const tbody = document.getElementById("exercisePostsBody");
+				tbody.innerHTML = "";
+
+				const totalPages = Math.ceil(allExercisePosts.length / exerciseItemsPerPage);
+				exerciseCurrentPage = Math.min(Math.max(1, page), totalPages);
+
+				const start = (exerciseCurrentPage - 1) * exerciseItemsPerPage;
+				const pageData = allExercisePosts.slice(start, start + exerciseItemsPerPage);
+
+				pageData.forEach(post => {
+					const [date, time] = post.exerciseTime?.split("T") ?? ["", ""];
+					const exerciseTime = `${date.replace(/-/g, "/")}<br>${time}`;
+					const photo = post.photoPath
+						? `<img src="/${post.photoPath}" width="80" height="80">`
+						: `画像なし`;
+
+					const row = document.createElement("tr");
+					row.innerHTML = `
+				<td>${post.id}</td>
+				<td>${post.exerciseName}</td>
+				<td>${post.bodyPart}</td>
+				<td class="smaller-text">${exerciseTime}</td>
+				<td class="smaller-text">${post.calorieBurned}</td>
+				<td class="smaller-text">${post.repetitionCount}</td>
+				<td class="smaller-text">${post.setCount}</td>
+				<td>${post.memo ?? ""}</td>
+				<td>${photo}</td>
+				<td><a href="/exercisePosts/edit/${post.id}" class="btn btn-primary">編集</a></td>
+				<td>
+				  <button class="btn btn-danger deleteExercise"
+				          data-name="${post.exerciseName}"
+				          data-id="${post.id}"
+				          data-bs-toggle="modal"
+				          data-bs-target="#confirmExerciseDeleteModal">
+				    削除
+				  </button>
+				</td>
+			`;
+					tbody.appendChild(row);
+				});
+
+				renderExercisePaginationControls(totalPages);
+			}
+
+			document.addEventListener("DOMContentLoaded", () => {
+				// 削除ボタンにイベントをバインド
+				document.addEventListener("click", function (e) {
+					if (e.target.classList.contains("deleteExercise")) {
+						const name = e.target.getAttribute("data-name");
+						const id = e.target.getAttribute("data-id");
+						document.getElementById("exercise-delete-name").textContent = name;
+						document.getElementById("exercise-delete-yes").setAttribute("href", `/exercisePosts/delete/${id}`);
+					}
+				});
+			});
+
+			function renderExercisePaginationControls(totalPages) {
+				const container = document.getElementById("exercisePaginationControls");
+				container.innerHTML = "";
+
+				if (totalPages <= 1) return;
+
+				const ul = document.createElement("ul");
+				ul.className = "pagination";
+
+				ul.appendChild(createPageButton("«", exerciseCurrentPage > 1, () => renderExercisePage(exerciseCurrentPage - 1)));
+
+				for (let i = 1; i <= totalPages; i++) {
+					if (i === 1 || i === totalPages || Math.abs(exerciseCurrentPage - i) <= 2) {
+						ul.appendChild(createPageButton(i, true, () => renderExercisePage(i), i === exerciseCurrentPage));
+					} else if (i === exerciseCurrentPage - 3 || i === exerciseCurrentPage + 3) {
+						const li = document.createElement("li");
+						li.className = "page-item disabled";
+						li.innerHTML = `<span class="page-link">…</span>`;
+						ul.appendChild(li);
+					}
+				}
+
+				ul.appendChild(createPageButton("»", exerciseCurrentPage < totalPages, () => renderExercisePage(exerciseCurrentPage + 1)));
+				container.appendChild(ul);
+			}
+
+			function createPageButton(label, enabled, onClick, active = false) {
+				const li = document.createElement("li");
+				li.className = `page-item ${!enabled ? "disabled" : ""} ${active ? "active" : ""}`;
+
+				const a = document.createElement("a");
+				a.className = "page-link";
+				a.href = "#";
+				a.textContent = label;
+
+				if (enabled) {
+					a.addEventListener("click", e => {
+						e.preventDefault();
+						onClick();
+					});
+				}
+
+				li.appendChild(a);
+				return li;
+			}
+
+			window.addEventListener("DOMContentLoaded", () => {
+				renderExercisePage();
+			});
+		</script>
+
+		<script>
+			$(document).ready(function () {
+				$('#calendar').fullCalendar({
+					locale: 'ja',
+					height: 600,
+					header: {
+						left: 'prev,next today',
+						center: 'title',
+						right: 'month'
+					},
+					height: 'auto',  // 高さを自動にする
+					contentHeight: 'auto',       // ✅ 内容に応じて高さを自動調整
+					fixedWeekCount: false,       // ✅ 投稿がない週は描画しない（＝カレンダーの高さが詰まる
+					displayEventTime: false,  // ← ★これが v3 の正しい指定方法
+					events: {
+						url: '/api/events/all'
+					},
+					eventClick: function (event) {
+						if (event.url) {
+							window.location.href = event.url;
+							return false;
+						}
+					},
+					eventRender: function (event, element) {
+						const startHour = moment(event.start).hour();
+
+						// 背景色
+						let bgColor = '';
+						if (startHour >= 5 && startHour < 11) bgColor = '#e0f7fa';
+						else if (startHour >= 11 && startHour < 15) bgColor = '#fff3e0';
+						else if (startHour >= 15 && startHour < 21) bgColor = '#c8e6c9';
+						else bgColor = '#f8bbd0';
+
+						element.css({
+							'background-color': bgColor,
+							'color': '#000',
+							'display': 'flex',
+							'align-items': 'center',
+							'gap': '4px'
+						});
+
+						element.find('.fc-title').html('');
+
+						let html = '';
+						if (event.photoPath) {
+							html += `<img src="/${event.photoPath}" width="30" height="30" style="border-radius:4px;" /> `;
+						}
+
+						if (event.calorie) {
+							const calorieStr = parseFloat(event.calorie).toString();
+							html += `<span style="font-weight: bold;">${calorieStr}</span>`;
+						}
+						html += `<span> :${event.title}</span>`;
+
+						element.find('.fc-title').append(html);
+					}
+				});
+
+
+			});
+		</script>
+</body>
+
+</html>

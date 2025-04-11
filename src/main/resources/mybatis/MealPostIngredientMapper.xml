@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper
+	namespace="com.example.app.mapper.MealPostIngredientMapper">
+	<select id="selectByMealPostId"
+		resultType="com.example.app.domain.MealPostIngredient">
+		SELECT * FROM meal_post_ingredients WHERE meal_post_id =
+		#{mealPostId}
+	</select>
+
+	<delete id="deleteByMealPostId" parameterType="int">
+		DELETE FROM meal_post_ingredients WHERE meal_post_id = #{mealPostId}
+	</delete>
+
+	<insert id="insert"
+		parameterType="com.example.app.domain.MealPostIngredient">
+		INSERT INTO meal_post_ingredients (meal_post_id, nutrition_food_id,
+		amount_grams)
+		VALUES (#{mealPostId}, #{nutritionFoodId}, #{amountGrams})
+	</insert>
+</mapper>

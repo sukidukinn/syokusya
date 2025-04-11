@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<link rel="icon" type="image/x-icon" th:href="@{/favicon.ico}">
+	<meta charset="UTF-8">
+	<title>プロフィール編集</title>
+	<link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+	<style>
+		body {
+			padding: 20px;
+		}
+
+		:root {
+			--health-box-width: 300px;
+			--breakpoint: 600px;
+			/* 👈 ← ここで調整可能に！ */
+		}
+
+		.sticky-health-box {
+			position: sticky;
+			top: 100px;
+			width: var(--health-box-width);
+			max-width: 100%;
+			padding: 20px;
+			background: #f8f9fa;
+			border: 1px solid #ccc;
+			border-radius: 8px;
+		}
+
+		@media screen and (max-width: 600px) {
+			.sticky-health-box {
+				position: static;
+				width: 100%;
+				margin-top: 20px;
+			}
+
+			.form-layout {
+				flex-direction: column;
+			}
+		}
+
+		.form-layout {
+			display: flex;
+			gap: 20px;
+			align-items: flex-start;
+		}
+
+		.form-left {
+			flex: 1;
+		}
+	</style>
+
+
+</head>
+
+<body>
+	<h2>プロフィール編集</h2>
+
+
+	<div class="row">
+		<!-- 左側：プロフィールフォーム -->
+		<div class="col-md-6">
+			<form th:action="@{/profile/update}" th:object="${user}" method="post" enctype="multipart/form-data"
+				id="profileForm">
+				<!-- プロフィール画像表示 -->
+				<div class="mb-3">
+					<label>プロフィール画像</label><br>
+					<img th:if="${user.photoPath != null}"
+						th:src="@{'/uploads/' + ${#strings.substringAfter(user.photoPath, 'uploads/')}}"
+						class="img-thumbnail mb-2" alt="プロフィール画像" width="400" height="400">
+					<span th:if="${user.photoPath == null}">画像なし</span>
+				</div>
+
+				<!-- ファイルアップロード -->
+				<div class="mb-3">
+					<label>画像アップロード：</label>
+					<input type="file" name="photoFile" class="form-control" onchange="previewImage(event)">
+				</div>
+
+				<!-- プレビュー -->
+				<div class="mb-3" id="preview-container" style="display: none;">
+					<label>アップロードプレビュー</label><br>
+					<img id="preview" class="img-thumbnail" width="200" height="200" style="display: none;" />
+				</div>
+
+				<!-- 画像削除ボタン -->
+				<div class="mb-3">
+					<a th:href="@{/profile/clearImage}" class="btn btn-warning"
+						onclick="return confirm('画像を削除します。よろしいですか？');">画像のみ削除</a>
+				</div>
+
+				<div class="mb-3">
+					<label>名前</label>
+					<input type="text" class="form-control" th:field="*{name}">
+					<div class="text-danger" th:errors="*{name}"></div>
+				</div>
+				<div class="mb-3">
+					<label>ニックネーム</label>
+					<input type="text" class="form-control" th:field="*{nickname}">
+				</div>
+				<div class="mb-3">
+					<label>年齢</label>
+					<input type="number" id="age" class="form-control" th:field="*{age}">
+					<div class="text-danger" th:errors="*{age}"></div>
+				</div>
+				<div class="mb-3">
+					<label>住所</label>
+					<input type="text" class="form-control" th:field="*{address}">
+				</div>
+				<div class="mb-3">
+					<label>性別</label>
+					<select class="form-select" id="sex" th:field="*{sex}">
+						<option value="0">男性</option>
+						<option value="1">女性</option>
+						<option value="2">その他</option>
+					</select>
+				</div>
+				<div class="mb-3" hidden>
+					<label>会員種別</label>
+					<select class="form-select" th:field="*{typeId}">
+						<option value="1">通常</option>
+						<option value="2">プレミアム</option>
+						<option value="3">運営</option>
+						<option value="4">脱退</option>
+					</select>
+				</div>
+				<div class="mb-3">
+					<label>身長 (cm)</label>
+					<input type="number" class="form-control" id="heightCm" th:field="*{heightCm}">
+				</div>
+				<div class="mb-3">
+					<label>体重 (kg)</label>
+					<input type="number" class="form-control" id="weightKg" th:field="*{weightKg}">
+				</div>
+				<div class="mb-3">
+					<label>目標体重 (kg)</label>
+					<input type="number" class="form-control" th:field="*{goalWeightKg}">
+				</div>
+				<div class="mb-3">
+					<label>活動レベル（1.0〜2.5）</label>
+					<input type="number" step="0.01" class="form-control" id="activityLevel"
+						th:field="*{activityLevel}">
+				</div>
+				<div class="mb-3">
+					<label>自己紹介</label>
+					<textarea class="form-control" rows="3" th:field="*{bio}"></textarea>
+				</div>
+				<div class="mb-3">
+					<label>減量増量開始日</label>
+					<input type="date" class="form-control" name="startDate" th:field="*{startDate}">
+				</div>
+
+				<div class="mb-3">
+					<label>目標達成までの日数</label>
+					<input type="number" id="targetDays" class="form-control" th:field="*{targetDays}">
+				</div>
+
+				<div class="mb-3" hidden>
+					<label>進捗画像（ファイル名またはパス）</label>
+					<input type="text" class="form-control" th:field="*{progressPhotoPath}">
+				</div>
+				<div class="mb-3">
+					<label>メールアドレス</label>
+					<input type="email" class="form-control" th:field="*{email}">
+					<div class="text-danger" th:errors="*{email}"></div>
+				</div>
+				<div class="mb-3">
+					<label>パスワード</label>
+					<input type="password" class="form-control" th:field="*{password}">
+				</div>
+
+				<!-- フォーム内に追加 -->
+				<input type="hidden" th:field="*{bmi}" id="bmiHidden">
+				<input type="hidden" th:field="*{bmr}" id="bmrHidden">
+				<input type="hidden" th:field="*{tdee}" id="tdeeHidden">
+				<input type="hidden" th:field="*{idealWeightKg}" id="idealWeightHidden">
+				<input type="hidden" th:field="*{weightDiffKg}" id="weightDiffHidden">
+				<input type="hidden" th:field="*{calorieGoal}" id="calorieGoalHidden">
+			</form>
+		</div>
+
+		<!-- 右側：健康データ（追従させる） -->
+		<div class="col-md-6">
+			<div th:if="${pageMessage != null and !#strings.isEmpty(pageMessage)}" class="alert alert-success">
+				[[${pageMessage}]]
+			</div>
+
+			<div class="sticky-health-box">
+				<div>
+					<button form="profileForm" type="submit" name="action" value="save"
+						class="btn btn-primary">更新</button>
+					<button form="profileForm" type="submit" name="action" value="saveAndBack"
+						class="btn btn-success ms-2" hidden>保存して戻る</button>
+					<a th:href="@{/mealPosts}" class="btn btn-secondary">戻る</a>
+					<button type="button" class="btn btn-danger ms-2" onclick="confirmWithdrawal()">退会</button>
+				</div>
+				<hr>
+				<li class="list-group-item">BMI: <span id="bmiDisplay" class="text-danger fw-bold">-</span> (<span id="bmiLevel" class="text-danger fw-bold">普通</span>)</li>
+				<li class="list-group-item">BMR(基礎代謝量): <span id="bmrDisplay" class="text-danger fw-bold">-</span> kcal
+				</li>
+				<li class="list-group-item">TDEE(1日の総熱量): <span id="tdeeDisplay" class="text-danger fw-bold">-</span> kcal
+				</li>
+				<li class="list-group-item">理想体重 (BMI22): <span id="idealWeight" class="text-danger fw-bold">-</span> kg
+				</li>
+
+				<li class="list-group-item">理想との差: <span id="weightDiffIdeal" class="text-danger fw-bold">-</span> kg
+				</li>
+
+				<li class="list-group-item">目標との差: <span id="weightDiffGoal" class="text-danger fw-bold">-</span> kg
+				</li>
+				<li class="list-group-item">減量カロリー数: <span id="totalCalorieDiff"
+						class="text-danger fw-bold">-</span> kcal</li>
+				<li class="list-group-item">1日あたりの消費・減量カロリー数: <span id="dailyCalorieDiff" class="text-danger fw-bold">-</span>
+					kcal</li>
+				<hr>
+				<h4>食事タイミング別の目安</h4>
+				<li class="list-group-item">
+					朝食(25%): <span id="calorieMorning" class="text-danger fw-bold">-</span> kcal /
+					<span id="weightMorning" class="text-danger fw-bold">-</span> g
+				</li>
+				<li class="list-group-item">
+					昼食(35%): <span id="calorieNoon" class="text-danger fw-bold">-</span> kcal /
+					<span id="weightNoon" class="text-danger fw-bold">-</span> g
+				</li>
+				<li class="list-group-item">
+					夕食(40%): <span id="calorieDinner" class="text-danger fw-bold">-</span> kcal /
+					<span id="weightDinner" class="text-danger fw-bold">-</span> g
+				</li>
+				<p class="text-muted small">
+					牛丼: 495 kcal<br />かけそば: 371 kcal<br />ご飯200g: 312 kcal<br />
+					<a href="https://www.tanita.co.jp/magazine/column/4861/" target="_blank"
+						rel="noopener noreferrer">摂取カロリー早見表</a>参照
+				</p>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		function confirmWithdrawal() {
+			if (confirm("本当に退会しますか？退会するとログインできなくなります。")) {
+				location.href = "/profile/withdraw";
+			}
+		}
+
+		function updateHealthInfo() {
+			const height = parseFloat(document.getElementById('heightCm')?.value) || 0;
+			const weight = parseFloat(document.getElementById('weightKg')?.value) || 0;
+			const age = parseInt(document.getElementById('age')?.value) || 0;
+			const sex = parseInt(document.getElementById('sex')?.value); // 0: 男性, 1: 女性
+			const goalWeight = parseFloat(document.querySelector('[name="goalWeightKg"]')?.value) || 0;
+			const activityLevel = parseFloat(document.getElementById('activityLevel')?.value) || 1.2;
+			const targetDays = parseInt(document.getElementById('targetDays')?.value) || 90;
+
+			if (height <= 0 || weight <= 0 || isNaN(sex)) return;
+
+			// BMI計算
+			const bmi = weight / ((height / 100) ** 2);
+			document.getElementById('bmiDisplay').textContent = bmi.toFixed(2);
+			const bmiHidden2 = document.getElementById('bmiHidden');
+			if (bmiHidden2) bmiHidden.value = bmi.toFixed(2);
+
+			// BMI指標
+			let bmiLevel = "";
+			if (bmi < 18.5) bmiLevel = "痩せ気味";
+			else if (bmi < 25) bmiLevel = "標準";
+			else if (bmi < 30) bmiLevel = "肥満（1度）";
+			else if (bmi < 35) bmiLevel = "肥満（2度）";
+			else bmiLevel = "肥満（3度以上）";
+			document.getElementById('bmiLevel').textContent = bmiLevel;
+
+			// 基礎代謝 BMR（ハリス・ベネディクト式 改良版）
+			let bmr = 0;
+			if (sex === 0) {
+				bmr = 13.397 * weight + 4.799 * height - 5.677 * age + 88.362;
+			} else if (sex === 1) {
+				bmr = 9.247 * weight + 3.098 * height - 4.33 * age + 447.593;
+			} else {
+				bmr = (13.397 * weight + 4.799 * height - 5.677 * age + 88.362 + 9.247 * weight + 3.098 * height - 4.33 * age + 447.593) / 2;
+			}
+			document.getElementById('bmrDisplay').textContent = bmr.toFixed(2);
+			const bmrHidden2 = document.getElementById('bmrHidden');
+			if (bmrHidden2) bmrHidden.value = bmr.toFixed(2);
+
+			// TDEE 総消費カロリー
+			const tdee = bmr * activityLevel;
+			document.getElementById('tdeeDisplay').textContent = tdee.toFixed(2);
+			const tdeeHidden = document.getElementById('tdeeHidden');
+			if (tdeeHidden) tdeeHidden.value = tdee.toFixed(2);
+
+			// 食事バランス(表示するだけの参考項目)
+			const morningRate = 0.25, noonRate = 0.35, nightRate = 0.40;
+			const totalWeight = weight * 10;
+			const morningCal = tdee * morningRate;
+			const noonCal = tdee * noonRate;
+			const nightCal = tdee * nightRate;
+			const morningWeight = totalWeight * morningRate;
+			const noonWeight = totalWeight * noonRate;
+			const nightWeight = totalWeight * nightRate;
+			document.getElementById('calorieMorning').textContent = morningCal.toFixed(0);
+			document.getElementById('calorieNoon').textContent = noonCal.toFixed(0);
+			document.getElementById('calorieDinner').textContent = nightCal.toFixed(0);
+
+			document.getElementById('weightMorning').textContent = morningWeight.toFixed(0);
+			document.getElementById('weightNoon').textContent = noonWeight.toFixed(0);
+			document.getElementById('weightDinner').textContent = nightWeight.toFixed(0);
+
+			// 理想体重（BMI = 22）
+			const idealWeight = 22 * ((height / 100) ** 2);
+			document.getElementById('idealWeight').textContent = idealWeight.toFixed(1);
+			const idealWeightHidden = document.getElementById('idealWeightHidden');
+			if (idealWeightHidden) idealWeightHidden.value = idealWeight.toFixed(1);
+
+			// 目標との差
+			const weightDiffGoal = weight - goalWeight;
+			document.getElementById('weightDiffGoal').textContent = weightDiffGoal.toFixed(1);
+			const weightDiffHidden = document.getElementById('weightDiffHidden');
+			if (weightDiffHidden) weightDiffHidden.value = weightDiffGoal.toFixed(1);
+
+			// 総カロリー差 = 差分kg × 7200kcal
+			const totalCalorieDiff = weightDiffGoal * 7200;
+			document.getElementById('totalCalorieDiff').textContent = totalCalorieDiff.toFixed(0);
+			const dailyCalorieDiff = totalCalorieDiff / targetDays;
+			document.getElementById('dailyCalorieDiff').textContent = dailyCalorieDiff.toFixed(0);
+
+			// 1日あたりのカロリー差
+			document.getElementById('dailyCalorieDiff').textContent = dailyCalorieDiff.toFixed(0);
+			const calorieGoalHidden = document.getElementById('calorieGoalHidden');
+			if (calorieGoalHidden) calorieGoalHidden.value = dailyCalorieDiff.toFixed(0);
+			// 理想との差
+			const weightDiffIdeal = weight - idealWeight;
+			document.getElementById('weightDiffIdeal').textContent = weightDiffIdeal.toFixed(1);
+
+
+			const calorieGoalHidden2 = document.getElementById('calorieGoalHidden');
+			if (calorieGoalHidden2) calorieGoalHidden.value = dailyCalorieDiff.toFixed(0);
+		}
+
+		// 入力に反応して更新
+		window.addEventListener('DOMContentLoaded', () => {
+			const inputs = ['age', 'sex', 'heightCm', 'weightKg', 'activityLevel', 'goalWeightKg'];
+			inputs.forEach(id => {
+				const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+				if (el) {
+					el.addEventListener('input', updateHealthInfo);
+					el.addEventListener('change', updateHealthInfo);
+				}
+			});
+			updateHealthInfo(); // 初期描画時も反映
+		});
+
+		// 変更イベントにバインド
+		window.addEventListener('DOMContentLoaded', () => {
+			const inputsToWatch = ['age', 'sex', 'heightCm', 'weightKg', 'activityLevel'];
+			inputsToWatch.forEach(id => {
+				const el = document.getElementById(id);
+				if (el) {
+					el.addEventListener('input', updateHealthInfo);
+					el.addEventListener('change', updateHealthInfo);
+				}
+			});
+
+			updateHealthInfo(); // 初期描画も実行
+		});
+
+		window.addEventListener('DOMContentLoaded', () => {
+			updateHealthInfo();
+		});
+		function previewImage(event) {
+			const file = event.target.files[0];
+			if (!file) return;
+
+			const reader = new FileReader();
+			reader.onload = function (e) {
+				const preview = document.getElementById("preview");
+				const container = document.getElementById("preview-container");
+				preview.src = e.target.result;
+				preview.style.display = "block";
+				container.style.display = "block";
+			};
+			reader.readAsDataURL(file);
+		}
+	</script>
+</body>
+
+</html>

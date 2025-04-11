@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<title>エクササイズ投稿</title>
+	<link rel="stylesheet" th:href="@{/css/bootstrap.min.css}" />
+</head>
+
+<body>
+<div class="container mt-4">
+	<h2>エクササイズ投稿</h2>
+
+	<!-- メッセージ -->
+	<div th:if="${pageMessage != null and !#strings.isEmpty(pageMessage)}" class="alert alert-info" th:text="${pageMessage}"></div>
+
+	<form th:action="@{/exercisePosts/save}" th:object="${exercisePost}" method="post" enctype="multipart/form-data">
+		<input type="hidden" th:field="*{id}" />
+
+		<div class="mb-3">
+			<label>運動名</label>
+			<input type="text" class="form-control" th:field="*{exerciseName}" />
+			<div class="text-danger" th:errors="*{exerciseName}"></div>
+		</div>
+
+		<div class="mb-3">
+			<label>運動部位</label>
+			<input type="text" th:field="*{bodyPart}" class="form-control" />
+		</div>
+
+		<div class="mb-3 row">
+			<div class="col">
+				<label>セット数</label>
+				<input type="number" th:field="*{setCount}" class="form-control" />
+				<div class="text-danger" th:errors="*{setCount}"></div>
+			</div>
+			<div class="col">
+				<label>回数</label>
+				<input type="number" th:field="*{repetitionCount}" class="form-control" />
+				<div class="text-danger" th:errors="*{repetitionCount}"></div>
+			</div>
+			<div class="col">
+				<label>運動時間 (分)</label>
+				<input type="number" class="form-control" th:field="*{durationMinutes}" />
+				<div class="text-danger" th:errors="*{durationMinutes}"></div>
+			</div>
+		</div>
+
+		<div class="mb-3">
+			<label>運動レベル</label>
+			<input type="text" th:field="*{intensityLevel}" class="form-control" />
+		</div>
+
+		<div class="mb-3">
+			<label>消費カロリー</label>
+			<input type="number" th:field="*{calorieBurned}" min="0" class="form-control" required />
+			<div class="text-danger" th:errors="*{calorieBurned}"></div>
+		</div>
+
+		<div class="mb-3">
+			<label>実施日時</label>
+			<input type="datetime-local" class="form-control" th:field="*{exerciseTime}" />
+		</div>
+
+		<div class="mb-3">
+			<label>メモ</label>
+			<textarea class="form-control" rows="3" th:field="*{memo}"></textarea>
+		</div>
+
+		<!-- ファイルアップロード -->
+		<div class="mb-3">
+			<label>写真アップロード</label>
+			<input type="file" name="photoFile" class="form-control" onchange="previewImage(event)" />
+		</div>
+
+		<!-- プレビュー -->
+		<div class="mb-3" id="preview-container" style="display: none;">
+			<label>プレビュー</label><br />
+			<img id="preview" class="img-thumbnail" width="200" style="display: none;" />
+		</div>
+
+		<!-- 既存画像 -->
+		<div th:if="${exercisePost.photoPath != null}" class="mb-3">
+			<label>現在の画像</label><br />
+			<img th:src="@{'/' + ${exercisePost.photoPath}}" width="200" class="img-thumbnail" />
+		</div>
+
+		<!-- 操作ボタン -->
+		<div class="mt-4 d-flex gap-3">
+			<button type="submit" name="action" value="saveAndBack" class="btn btn-primary">保存して戻る</button>
+			<button type="submit" name="action" value="saveOnly" class="btn btn-secondary">保存のみ</button>
+			<a th:href="@{/mealposts}" class="btn btn-outline-secondary">戻る</a>
+			<a th:if="${exercisePost.id != null}" th:href="@{/exercisePosts/delete/{id}(id=${exercisePost.id})}" class="btn btn-danger"
+			   onclick="return confirm('この投稿を削除します。よろしいですか？');">削除</a>
+		</div>
+	</form>
+</div>
+
+<script>
+	function previewImage(event) {
+		const file = event.target.files[0];
+		if (!file) return;
+
+		const reader = new FileReader();
+		reader.onload = function () {
+			const preview = document.getElementById("preview");
+			const container = document.getElementById("preview-container");
+			preview.src = reader.result;
+			preview.style.display = "block";
+			container.style.display = "block";
+		};
+		reader.readAsDataURL(file);
+	}
+</script>
+</body>
+</html>

@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<link rel="icon" type="image/x-icon" th:href="@{/favicon.ico}">
+	<meta charset="UTF-8">
+	<title>食事投稿詳細</title>
+	<link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+</head>
+
+<body>
+	<form th:action="@{/mealPosts/save}" th:object="${mealPost}" method="post" enctype="multipart/form-data">
+		<input type="hidden" th:field="*{id}">
+		<div th:if="${pageMessage != null and !#strings.isEmpty(pageMessage)}" class="alert alert-info"
+			th:text="${pageMessage}">
+		</div>
+		<div class="card mb-4">
+			<div class="row g-0">
+				<!-- 左側：画像 -->
+				<div class="col-md-6 p-3 border-end">
+					<img th:if="${mealPost.photoPath != null}"
+						th:src="@{'/uploads/' + ${#strings.substringAfter(mealPost.photoPath, 'uploads/')}}"
+						class="img-fluid rounded-start mb-3" alt="meal photo">
+
+					<span th:if="${mealPost.photoPath == null}">画像なし</span>
+
+					<div class="mb-3">
+						<label>写真アップロード：</label>
+						<input type="file" name="photoFile" class="form-control" onchange="previewImage(event)">
+					</div>
+
+					<div class="mb-3" id="preview-container" style="display: none;">
+						<label>食事写真（プレビュー）<br><strong>※食事情報更新ボタンを押すと反映されます</strong></label><br>
+						<img id="preview" class="img-thumbnail" width="360" height="240" style="display: none;" />
+					</div>
+
+					<!-- 保存ボタン -->
+					<div class="mt-3 d-flex gap-3">
+						<button type="submit" name="action" value="save" class="btn btn-primary">保存して戻る</button>
+						<button type="submit" name="action" value="saveOnly" class="btn btn-secondary">保存のみ</button>
+
+						<!-- 画像削除ボタン（GETで画像のみクリア） -->
+						<a th:if="${mealPost.id != null}" th:href="@{/mealPosts/{id}/clearImage(id=${mealPost.id})}"
+							class="btn btn-warning" onclick="return confirm('画像を削除します。よろしいですか？');">
+							画像のみ削除
+						</a>
+
+						<!-- 投稿削除ボタン（GETで削除確認付き） -->
+						<a th:if="${mealPost.id != null}" th:href="@{/mealPosts/delete/{id}(id=${mealPost.id})}"
+							class="btn btn-danger" onclick="return confirm('この食事投稿を完全に削除します。よろしいですか？');">
+							食事削除
+						</a>
+					</div>
+				</div>
+
+				<!-- 右側：入力フォーム -->
+				<div class="col-md-6 p-3">
+					<div class="mb-2">
+						<label>食事名：</label>
+						<input type="text" th:field="*{mealName}" class="form-control">
+						<div class="text-danger" th:errors="*{mealName}"></div>
+					</div>
+					<div class="mb-2">
+						<label>食事時間：</label>
+						<input type="datetime-local" th:field="*{mealTime}" class="form-control" />
+						<div class="text-danger" th:errors="*{mealTime}"></div>
+					</div>
+					<div class="mb-2">
+						<label>メモ：</label>
+						<textarea th:field="*{memo}" class="form-control" rows="2"></textarea>
+					</div>
+					<div class="mb-2">
+						<label>カロリー：</label>
+						<input type="number" th:field="*{totalCalorie}" step="0.01" class="form-control">
+						<div class="text-danger" th:errors="*{totalCalorie}"></div>
+						<label>総重量 (g)：</label>
+						<input type="number" th:field="*{totalGrams}" step="0.1" class="form-control">
+						<div class="text-danger" th:errors="*{totalGrams}"></div>
+						
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						<label>たんぱく質：</label>
+						<input type="number" th:field="*{proteinG}" step="0.01" class="form-control">
+						<div class="text-danger" th:errors="*{proteinG}"></div>
+					</div>
+					<div class="col">
+						<label>脂質：</label>
+						<input type="number" th:field="*{fatG}" step="0.01" class="form-control">
+						<div class="text-danger" th:errors="*{fatG}"></div>
+					</div>
+					<div class="col">
+						<label>炭水化物：</label>
+						<input type="number" th:field="*{carbohydrateG}" step="0.01" class="form-control">
+						<div class="text-danger" th:errors="*{carbohydrateG}"></div>
+					</div>
+				</div>
+				<div class="row mt-2">
+					<div class="col">
+						<label>食物繊維：</label>
+						<input type="number" th:field="*{fiberG}" step="0.01" class="form-control">
+						<div class="text-danger" th:errors="*{fiberG}"></div>
+					</div>
+					<div class="col">
+						<label>塩分：</label>
+						<input type="number" th:field="*{saltG}" step="0.01" class="form-control">
+						<div class="text-danger" th:errors="*{saltG}"></div>
+					</div>
+					<div class="col">
+						<label>コレステロール(mg)：</label>
+						<input type="number" th:field="*{cholesterolMg}" step="0.01" class="form-control">
+						<div class="text-danger" th:errors="*{cholesterolMg}"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+		</div>
+
+	</form>
+
+	<div class="container">
+
+		<div class="mt-5 mb-3">
+			<h4 class="d-inline">使用食材一覧</h4>
+			<button type="button" class="btn btn-warning" onclick="recalculateNutrition()">
+				🔢 栄養再計算
+			</button>
+			<button class="btn btn-success" onclick="addIngredientRow()">
+				＋ 食材追加
+			</button>
+
+			<button type="button" class="btn btn-secondary" onclick="reloadIngredientsFromDB()">
+				🔄 食材DB読込
+			</button>
+			<button type="button" class="btn btn-primary" onclick="submitIngredients()">
+				💾 食材DB反映
+			</button>
+			<button type="button" class="btn btn-warning" onclick="applyToMealPost()">
+				食事投稿に反映
+			</button>
+			<div class="d-flex align-items-center gap-2 mt-2">
+				<input type="text" id="foodFilterInput" class="form-control w-25" placeholder="食材フィルタ (例: そば)">
+				<label>
+					<input type="checkbox" id="foodFilterEnable" checked>
+					フィルタ反映
+				</label>
+			</div>
+		</div>
+
+
+		<h4>食材一覧</h4>
+
+		<table class="table table-bordered">
+			<thead>
+				<tr>
+					<th>#</th>
+					<th>食材名</th>
+					<th>使用量 (g)</th>
+					<th>カロリー</th>
+					<th>たんぱく質</th>
+					<th>脂質</th>
+					<th>炭水化物</th>
+					<th>食物繊維</th>
+					<th>塩分</th>
+					<th>コレステロール</th>
+					<th>操作</th>
+				</tr>
+			</thead>
+			<tbody id="ingredientTable">
+				<!-- JSで追加される行のテンプレート例 -->
+			</tbody>
+			<tfoot>
+				<tr id="ingredientTotalRow">
+					<!-- 合計がここに入る -->
+				</tr>
+			</tfoot>
+		</table>
+
+
+
+		<p class="mt-4">
+			<a class="btn btn-secondary" th:href="@{/mealposts}">← 保存しないで戻る</a>
+		</p>
+
+		<h4 class="mt-5"><a href="https://www.city.osaka.lg.jp/kenko/page/0000506951.html">大阪府 日本食品標準成分表</a></h4>
+		<table class="table table-bordered table-sm" id="nutritionFoodsTable">
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>食品名</th>
+					<th>群</th>
+					<th>カロリー</th>
+					<th>たんぱく質</th>
+					<th>脂質</th>
+					<th>炭水化物</th>
+					<th>食物繊維</th>
+					<th>塩分</th>
+					<th>コレステロール</th>
+				</tr>
+			</thead>
+			<tbody id="nutritionFoodsBody">
+				<!-- JavaScriptで描画するので中身は初期空でOK -->
+			</tbody>
+		</table>
+	</div>
+
+	<div id="paginationControls" class="mt-3 d-flex justify-content-center"></div>
+
+	</div>
+	<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+
+	<!-- 削除確認モーダル -->
+	<div class="modal fade" id="confirm-modal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">削除確認</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+				</div>
+				<div class="modal-body">
+					「<span id="delete-name"></span>」の食事投稿を削除します。よろしいですか？
+				</div>
+				<div class="modal-footer">
+					<a class="btn btn-danger" id="delete-yes">はい</a>
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">いいえ</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+	<script>
+		let ingredientCounter = 0;
+		const nutritionFoods = /*[[${nutritionFoods}]]*/ null || [];
+		const ingredients = /*[[${ingredients}]]*/ null || [];
+
+		document.querySelectorAll(".delete").forEach(btn =>
+			btn.addEventListener("click", e => {
+				const name = e.target.getAttribute("data-name");
+				document.getElementById("delete-name").textContent = name;
+				const href = e.target.getAttribute("data-href");
+				document.getElementById("delete-yes").setAttribute("href", href);
+			})
+		);
+
+		function previewImage(event) {
+			const reader = new FileReader();
+			reader.onload = function () {
+				const preview = document.getElementById('preview');
+				preview.src = reader.result;
+			};
+			reader.readAsDataURL(event.target.files[0]);
+		}
+
+		function previewImage(event) {
+			const file = event.target.files[0];
+			if (!file) return;
+
+			const reader = new FileReader();
+			reader.onload = function () {
+				const preview = document.getElementById("preview");
+				const container = document.getElementById("preview-container");
+
+				preview.src = reader.result;
+				preview.style.display = "block";      // プレビュー画像を表示
+				container.style.display = "block";    // ラベルと枠を表示
+			};
+			reader.readAsDataURL(file);
+		}
+
+		// 栄養情報取得
+		function getNutritionById(id) {
+			return nutritionFoods.find(f => f.id === Number(id));
+		}
+
+		function getFoodOptions(selectedId) {
+			return nutritionFoods.map(food =>
+				`<option value="${food.id}" ${food.id === selectedId ? 'selected' : ''}>${food.foodName}</option>`
+			).join("");
+		}
+
+
+		function addIngredientRow(ingredient = {}) {
+			const table = document.getElementById("ingredientTable");
+			const row = document.createElement("tr");
+
+			row.innerHTML = `
+    <td>${++ingredientCounter}</td>
+    <td>
+      <select name="nutritionFoodIds" class="form-select">
+        ${getFoodOptions(ingredient.nutritionFoodId)}
+      </select>
+    </td>
+    <td>
+      <input type="number" name="amountGrams" class="form-control" value="${ingredient.amountGrams || 0}" min="0" step="1" />
+    </td>
+    <td class="calories">0.0</td>
+    <td class="protein">0.0</td>
+    <td class="fat">0.0</td>
+    <td class="carbs">0.0</td>
+    <td class="fiber">0.0</td>
+    <td class="salt">0.00</td>
+    <td class="cholesterol">0.0</td>
+    <td>
+      <button type="button" class="btn btn-danger btn-sm" onclick="confirmAndRemoveRow(this)">削除</button>
+    </td>
+  `;
+
+			const totalRow = document.getElementById("totalRow");
+			if (totalRow) {
+				table.insertBefore(row, totalRow); // 合計行の直前に追加
+			} else {
+				table.appendChild(row); // 合計行がなければ末尾に追加
+			}
+		}
+
+		function getFoodOptions(selectedId = null) {
+			const filterText = document.getElementById("foodFilterInput")?.value?.toLowerCase() || "";
+			const isFilterEnabled = document.getElementById("foodFilterEnable")?.checked;
+
+			return window.nutritionFoods
+				.filter(food => {
+					if (!isFilterEnabled || !filterText) return true;
+					return food.foodName.toLowerCase().includes(filterText);
+				})
+				.map(food => {
+					const selected = food.id === selectedId || food.foodCode === selectedId ? 'selected' : '';
+					return `<option value="${food.id}" ${selected}>${food.foodName}</option>`;
+				})
+				.join("");
+		}
+
+		// 🔄 ドロップダウン再描画処理
+		function refreshDropdowns() {
+			const selects = document.querySelectorAll('select[name="nutritionFoodIds"]');
+			selects.forEach(select => {
+				const currentValue = parseInt(select.value);
+				select.innerHTML = getFoodOptions(currentValue); // フィルタを再適用
+			});
+		}
+
+		// 🧠 入力フィルタ or チェックボックスの変更でイベント発火
+		document.getElementById("foodFilterInput")?.addEventListener("input", refreshDropdowns);
+		document.getElementById("foodFilterEnable")?.addEventListener("change", refreshDropdowns);
+
+		// 削除確認 → 行削除
+		function confirmAndRemoveRow(button) {
+			const ok = confirm("この食材行を削除しますか？");
+			if (ok) {
+				const row = button.closest('tr');
+				row.remove();
+			}
+		}
+
+		// DBから再読み込み（初期または更新後）
+		function reloadIngredientsFromDB() {
+			const table = document.getElementById("ingredientTableBody");
+			table.innerHTML = '';
+			ingredientCounter = 0;
+			ingredients.forEach(addIngredientRow);
+		}
+
+		// 初回表示
+		window.addEventListener("DOMContentLoaded", () => {
+			reloadIngredientsFromDB();
+		});
+	</script>
+
+	<!-- 食材一覧の更新、取得 -->
+	<script th:inline="javascript">
+		function submitIngredients() {
+			const postId = /*[[${mealPost.id}]]*/ 0;
+
+			const rows = Array.from(document.querySelectorAll('#ingredientTable tr'))
+				.filter(row => row.querySelector('select')); // 合計行を除く
+
+			const ingredients = rows.map(row => {
+				const nutritionFoodId = parseInt(row.querySelector('select').value);
+				const amountGrams = parseFloat(row.querySelector('input[name="amountGrams"]').value);
+
+				return {
+					mealPostId: postId,
+					nutritionFoodId,
+					amountGrams
+				};
+			});
+
+			console.log("🔄 送信データ:", ingredients);
+
+			fetch("/mealPosts/updateIngredients", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify(ingredients)
+			})
+				.then(response => {
+					if (!response.ok) throw new Error("サーバーエラー");
+					return response.text();
+				})
+				.then(message => {
+					alert("✅ 食材情報を保存しました");
+					console.log("📦 サーバーからのレスポンス:", message);
+				})
+				.catch(err => {
+					console.error("❌ 保存に失敗しました", err);
+					alert("⚠️ 保存に失敗しました");
+				});
+		}
+	</script>
+	<script th:inline="javascript">
+		const mealPostId = /*[[${mealPost.id}]]*/ 0;
+
+		function reloadIngredientsFromDB() {
+			if (!mealPostId || mealPostId === 0) {
+				console.log("⚠️ 新規作成中のため、DB読み込みスキップ");
+				return;
+			}
+
+			fetch(`/mealPosts/${mealPostId}/ingredients`)
+				.then(res => res.json())
+				.then(data => {
+					const table = document.getElementById("ingredientTable");
+					table.innerHTML = "";
+					ingredientCounter = 0;
+
+					// 追加 → 栄養計算のため一時的に合計用に集計
+					let total = {
+						grams: 0,
+						calories: 0,
+						protein: 0,
+						fat: 0,
+						carbs: 0,
+						fiber: 0,
+						salt: 0,
+						cholesterol: 0
+					};
+
+					data.forEach(ing => {
+						addIngredientRow(ing);
+
+						const food = window.nutritionFoods.find(f => f.id === ing.nutritionFoodId || f.foodCode === ing.nutritionFoodId);
+						if (food) {
+							const ratio = ing.amountGrams / 100;
+							total.grams += ing.amountGrams;
+							total.calories += food.energyKcal * ratio;
+							total.protein += food.proteinG * ratio;
+							total.fat += food.fatG * ratio;
+							total.carbs += food.carbohydrateG * ratio;
+							total.fiber += food.fiberG * ratio;
+							total.salt += food.saltG * ratio;
+							total.cholesterol += food.cholesterolMg * ratio;
+						}
+					});
+
+					// 栄養再計算を実行して、各行のセルに数値を入れる
+					recalculateNutrition();
+
+					// 合計行を追加
+					appendTotalRow(total);
+					console.log("✅ DB読み込み後に合計行を追加しました", total);
+				})
+				.catch(err => {
+					console.error("❌ DB読み込みエラー:", err);
+					alert("DB読み込みエラーが発生しました。");
+				});
+		}
+	</script>
+
+	<script th:inline="javascript">
+		window.nutritionFoods = /*[[${nutritionFoods}]]*/[];
+	</script>
+	<script>
+		function getFoodOptions(selectedId) {
+			const filterEnabled = document.getElementById("foodFilterEnable")?.checked;
+			const filterText = document.getElementById("foodFilterInput")?.value?.toLowerCase() || "";
+
+			// フィルタされたリスト
+			let filtered = window.nutritionFoods;
+
+			if (filterEnabled && filterText) {
+				filtered = filtered.filter(food => food.foodName.toLowerCase().includes(filterText));
+			}
+
+			// ✅ もし選択済みがフィルタ対象に含まれていなかったら、強制的に追加
+			const selectedFood = window.nutritionFoods.find(f => f.id === selectedId);
+			if (selectedFood && !filtered.some(f => f.id === selectedId)) {
+				filtered = [selectedFood, ...filtered];
+			}
+
+			return filtered.map(food => `
+    <option value="${food.id}" ${food.id === selectedId ? "selected" : ""}>
+      ${food.foodName}
+    </option>
+  `).join("");
+		}
+
+		function recalculateNutrition() {
+			if (!window.nutritionFoods || !Array.isArray(window.nutritionFoods)) {
+				console.error("❌ nutritionFoods が定義されていない、または配列ではありません");
+				return;
+			}
+
+			const tableRows = document.querySelectorAll("#ingredientTable tr");
+
+			// 合計値初期化
+			let totalGrams = 0;
+			let totalCalories = 0;
+			let totalProtein = 0;
+			let totalFat = 0;
+			let totalCarbs = 0;
+			let totalFiber = 0;
+			let totalSalt = 0;
+			let totalCholesterol = 0;
+
+			tableRows.forEach((row, index) => {
+				const select = row.querySelector('select[name="nutritionFoodIds"]');
+				const input = row.querySelector('input[name="amountGrams"]');
+
+				if (!select || !input) return;
+
+				const foodId = parseInt(select.value);
+				const grams = parseFloat(input.value);
+
+				if (!Number.isFinite(grams)) return;
+
+				const food = window.nutritionFoods.find(f => f.id === foodId); // f.id === foodId || f.foodCode === foodId
+				if (!food) return;
+
+				const ratio = grams / 100;
+
+				// 栄養素を表示
+				row.querySelector('.calories').textContent = (food.energyKcal * ratio).toFixed(1);
+				row.querySelector('.protein').textContent = (food.proteinG * ratio).toFixed(1);
+				row.querySelector('.fat').textContent = (food.fatG * ratio).toFixed(1);
+				row.querySelector('.carbs').textContent = (food.carbohydrateG * ratio).toFixed(1);
+				row.querySelector('.fiber').textContent = (food.fiberG * ratio).toFixed(1);
+				row.querySelector('.salt').textContent = (food.saltG * ratio).toFixed(2);
+				row.querySelector('.cholesterol').textContent = (food.cholesterolMg * ratio).toFixed(1);
+
+				// 合計に加算
+				totalGrams += grams;
+				totalCalories += food.energyKcal * ratio;
+				totalProtein += food.proteinG * ratio;
+				totalFat += food.fatG * ratio;
+				totalCarbs += food.carbohydrateG * ratio;
+				totalFiber += food.fiberG * ratio;
+				totalSalt += food.saltG * ratio;
+				totalCholesterol += food.cholesterolMg * ratio;
+			});
+
+			appendTotalRow({
+				grams: totalGrams,
+				calories: totalCalories,
+				protein: totalProtein,
+				fat: totalFat,
+				carbs: totalCarbs,
+				fiber: totalFiber,
+				salt: totalSalt,
+				cholesterol: totalCholesterol
+			});
+		}
+
+		function appendTotalRow({
+			grams, calories, protein, fat, carbs, fiber, salt, cholesterol
+		}) {
+			const oldRow = document.getElementById("totalRow");
+			if (oldRow) oldRow.remove();
+
+			const tbody = document.getElementById("ingredientTable");
+
+			const tr = document.createElement("tr");
+			tr.id = "totalRow";
+			tr.style.backgroundColor = "#f0f0f0";
+			tr.style.fontWeight = "bold";
+			tr.innerHTML = `
+    <td colspan="2" class="text-end">合計</td>
+    <td class="grams">${grams.toFixed(1)} g</td>
+    <td class="calories">${calories.toFixed(1)}</td>
+    <td class="protein">${protein.toFixed(1)}</td>
+    <td class="fat">${fat.toFixed(1)}</td>
+    <td class="carbs">${carbs.toFixed(1)}</td>
+    <td class="fiber">${fiber.toFixed(1)}</td>
+    <td class="salt">${salt.toFixed(2)}</td>
+    <td class="cholesterol">${cholesterol.toFixed(1)}</td>
+    <td></td>
+  `;
+			tbody.appendChild(tr);
+		}
+
+		function applyToMealPost() {
+			const totalRow = document.getElementById("totalRow");
+			if (!totalRow) {
+				alert("⚠️ 合計行が見つかりません。先に『再計算』してください。");
+				return;
+			}
+
+			const getCellValue = (className) => {
+				const cell = totalRow.querySelector(`.${className}`);
+				if (!cell) {
+					console.warn(`⚠️ セル .${className} が見つかりません`);
+					return 0;
+				}
+				const value = parseFloat(cell.textContent);
+				console.log(`📦 ${className} = ${value}`);
+				return isNaN(value) ? 0 : value;
+			};
+
+			// 合計行の値取得
+			const calorie = getCellValue("calories");
+			const grams = getCellValue("grams");
+			const protein = getCellValue("protein");
+			const fat = getCellValue("fat");
+			const carbs = getCellValue("carbs");
+			const fiber = getCellValue("fiber");
+			const salt = getCellValue("salt");
+			const cholesterol = getCellValue("cholesterol");
+
+			// 入力フォームに反映
+			document.querySelector('input[name="totalCalorie"]').value = calorie;
+			document.querySelector('input[name="totalGrams"]').value = grams;
+			document.querySelector('input[name="proteinG"]').value = protein;
+			document.querySelector('input[name="fatG"]').value = fat;
+			document.querySelector('input[name="carbohydrateG"]').value = carbs;
+			document.querySelector('input[name="fiberG"]').value = fiber;
+			document.querySelector('input[name="saltG"]').value = salt;
+			document.querySelector('input[name="cholesterolMg"]').value = cholesterol;
+		}
+
+		//栄養価一覧のフィル表示処理
+		function renderNutritionFoodsTable(filterText = "") {
+			const tbody = document.getElementById("nutritionFoodsBody");
+			tbody.innerHTML = ""; // 一度クリア
+
+			const filtered = window.nutritionFoods.filter(food =>
+				food.foodName.includes(filterText)
+			);
+
+			filtered.forEach(food => {
+				const tr = document.createElement("tr");
+				tr.innerHTML = `
+				<td>${food.id}</td>
+				<td>${food.foodName}</td>
+				<td>${food.groupName}</td>
+				<td>${food.energyKcal}</td>
+				<td>${food.proteinG}</td>
+				<td>${food.fatG}</td>
+				<td>${food.carbohydrateG}</td>
+				<td>${food.fiberG}</td>
+				<td>${food.saltG}</td>
+				<td>${food.cholesterolMg}</td>
+			`;
+				tbody.appendChild(tr);
+			});
+		}
+
+		document.getElementById("foodFilterInput").addEventListener("input", e => {
+			const keyword = e.target.value.trim();
+			renderNutritionFoodsTable(keyword);
+		});
+		renderNutritionFoodsTable(""); 
+	</script>
+
+	<!-- ページネーション（指定件数を超える場合はページ番号を表示するロジック） -->
+	<script>
+		const itemsPerPage = 40; // 1ページの表示件数
+		const pageRangeAround = 3;      // 現在ページの前後に表示するページ数
+		let currentPage = 1; // 現在のページ
+
+		function renderNutritionFoodsPage(filterText = "", page = 1) {
+			const tbody = document.getElementById("nutritionFoodsBody");
+			tbody.innerHTML = "";
+
+			const filtered = window.nutritionFoods.filter(food =>
+				food.foodName.includes(filterText)
+			);
+
+			const totalPages = Math.ceil(filtered.length / itemsPerPage);
+			currentPage = Math.min(Math.max(1, page), totalPages); // 安全チェック
+
+			const startIndex = (currentPage - 1) * itemsPerPage;
+			const paginatedFoods = filtered.slice(startIndex, startIndex + itemsPerPage);
+
+			paginatedFoods.forEach(food => {
+				const tr = document.createElement("tr");
+				tr.innerHTML = `
+				<td>${food.id}</td>
+				<td>${food.foodName}</td>
+				<td>${food.groupName}</td>
+				<td>${food.energyKcal}</td>
+				<td>${food.proteinG}</td>
+				<td>${food.fatG}</td>
+				<td>${food.carbohydrateG}</td>
+				<td>${food.fiberG}</td>
+				<td>${food.saltG}</td>
+				<td>${food.cholesterolMg}</td>
+			`;
+				tbody.appendChild(tr);
+			});
+
+			renderPaginationControls(totalPages, filterText);
+		}
+
+		function renderPaginationControls(totalPages, filterText) {
+			const container = document.getElementById("paginationControls");
+			container.innerHTML = "";
+
+			if (totalPages <= 1) return;
+
+			const ul = document.createElement("ul");
+			ul.className = "pagination";
+
+			// « 前へ
+			ul.appendChild(createPageButton("«", currentPage > 1, () => {
+				renderNutritionFoodsPage(filterText, currentPage - 1);
+			}));
+
+			const addPage = (i, isActive = false) => {
+				ul.appendChild(createPageButton(i, true, () => {
+					renderNutritionFoodsPage(filterText, i);
+				}, isActive));
+			};
+
+			// 1ページ目と省略記号
+			if (currentPage > 1 + pageRangeAround) {
+				addPage(1);
+				if (currentPage > 2 + pageRangeAround) {
+					addEllipsis(ul);
+				}
+			}
+
+			// 中央の前後ページ
+			for (let i = currentPage - pageRangeAround; i <= currentPage + pageRangeAround; i++) {
+				if (i >= 1 && i <= totalPages) {
+					addPage(i, i === currentPage);
+				}
+			}
+
+			// 最後のページと省略記号
+			if (currentPage < totalPages - pageRangeAround) {
+				if (currentPage < totalPages - pageRangeAround - 1) {
+					addEllipsis(ul);
+				}
+				addPage(totalPages);
+			}
+
+			// » 次へ
+			ul.appendChild(createPageButton("»", currentPage < totalPages, () => {
+				renderNutritionFoodsPage(filterText, currentPage + 1);
+			}));
+
+			container.appendChild(ul);
+		}
+
+		function addEllipsis(ul) {
+			const li = document.createElement("li");
+			li.className = "page-item disabled";
+			li.innerHTML = `<span class="page-link">…</span>`;
+			ul.appendChild(li);
+		}
+
+		function createPageButton(label, enabled, onClick, isActive = false) {
+			const li = document.createElement("li");
+			li.className = `page-item ${!enabled ? "disabled" : ""} ${isActive ? "active" : ""}`;
+
+			const a = document.createElement("a");
+			a.className = "page-link";
+			a.href = "#";
+			a.textContent = label;
+
+			if (enabled) {
+				a.addEventListener("click", e => {
+					e.preventDefault();
+					onClick();
+				});
+			}
+
+			li.appendChild(a);
+			return li;
+		}
+
+		// 入力フィルタで再描画（ページ1に戻す）
+		document.getElementById("foodFilterInput").addEventListener("input", e => {
+			const keyword = e.target.value.trim();
+			renderNutritionFoodsPage(keyword, 1);
+		});
+
+		// 初期表示
+		window.addEventListener("DOMContentLoaded", () => {
+			renderNutritionFoodsPage("", 1);
+		});
+	</script>
+</body>
+
+</html>

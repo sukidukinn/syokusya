@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<link rel="icon" type="image/x-icon" th:href="@{/favicon.ico}">
+	<meta charset="UTF-8">
+	<title>食材追加</title>
+	<link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+</head>
+
+<body>
+	<div class="container mt-4">
+		<h2>食材を追加（MealPost ID: [[${mealPostId}]])</h2>
+		<form method="post" th:action="@{/mealposts/{id}/ingredients/add(id=${mealPostId})}">
+			<div class="mb-3">
+				<label for="nutritionFoodId" class="form-label">食材</label>
+				<input type="number" name="nutritionFoodId" class="form-control" required>
+			</div>
+			<div class="mb-3">
+				<label for="amount" class="form-label">使用量（g）</label>
+				<input type="number" name="amountGrams" class="form-control" required>
+			</div>
+			<button type="submit" class="btn btn-primary">追加</button>
+		</form>
+		<p class="mt-3">
+			<a class="btn btn-secondary" th:href="@{/mealposts}">戻る</a>
+		</p>
+	</div>
+</body>
+
+</html>
