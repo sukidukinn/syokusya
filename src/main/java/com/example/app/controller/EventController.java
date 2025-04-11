@@ -39,7 +39,6 @@ public class EventController {
 	        Map<String, Object> event = new HashMap<>();
 	        event.put("title", "" + meal.getMealName());
 	        event.put("start", meal.getMealTime().toString());
-	        //event.put("calorie", meal.getMealTime().toString());
 	        event.put("calorie", meal.getTotalCalorie() != null ? meal.getTotalCalorie().toString() : "");
 	        event.put("url", "/mealPosts/edit/" + meal.getId());
 	        if (meal.getPhotoPath() != null) {
@@ -54,7 +53,7 @@ public class EventController {
 	        Map<String, Object> event = new HashMap<>();
 	        event.put("title", "" + exercise.getExerciseName());
 	        event.put("start", exercise.getExerciseTime().toString());
-	        event.put("calorie", "-" + exercise.getCalorieBurned() != null ? exercise.getCalorieBurned().toString() : "");
+	        event.put("calorie", exercise.getCalorieBurned() != null ? "-" + exercise.getCalorieBurned().toString() : "");
 	        event.put("url", "/exercisePosts/edit/" + exercise.getId());
 	        if (exercise.getPhotoPath() != null) {
 	            event.put("photoPath", exercise.getPhotoPath());

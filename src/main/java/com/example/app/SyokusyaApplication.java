@@ -6,10 +6,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @MapperScan("com.example.app.mapper")
 @SpringBootApplication
-public class Syokusya2Application {
+public class SyokusyaApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(Syokusya2Application.class, args);
+		SpringApplication.run(SyokusyaApplication.class, args);
 	}
 
 }

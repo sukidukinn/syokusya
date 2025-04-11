@@ -7,6 +7,18 @@
 	<title>食写一覧</title>
 	<link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
 	<style>
+		.calorie-over {
+			color: red;
+			font-size: 0.75em;
+			font-weight: bold;
+			margin-left: 3px;
+		}
+
+		.fc-day-number span {
+			display: inline-block;
+			vertical-align: middle;
+		}
+
 		/* FullCalendarのイベントコンテナでスクロール無効化 */
 		.fc-event-container {
 			overflow: visible !important;
@@ -129,6 +141,7 @@
 				alt="プロフィール画像" width="50" height="50" class="rounded-circle border" />
 			<span>[[${session.loginUser.nickname}]] さん！ 今日も頑張りましょう！</span>
 			<span>🔥TDEE: <strong>[[${session.loginUser.tdee}]]</strong>kcal</span>
+			<span id="calorieSummaryToday" class="fw-bold align-middle"></span>
 		</div>
 		<div class="d-flex align-items-center gap-2">
 			<a class="btn btn-sm btn-outline-secondary" th:href="@{/profile}">プロフィール</a>
@@ -138,37 +151,6 @@
 
 
 	<div class="container">
-		<div class="alert alert-info">
-			<p>
-				🎯 目標体重: <strong>[[${session.loginUser.goalWeightKg}]]</strong> kg<br>
-				📊 理想体重 (BMI22): <strong>[[${session.loginUser.idealWeightKg}]]</strong> kg<br>
-				📉 現在との差分: <strong>[[${session.loginUser.weightDiffKg}]]</strong> kg
-			</p>
-
-			<p>
-				🔥 基礎代謝 (BMR): <strong>[[${session.loginUser.bmr}]]</strong> kcal<br>
-				🚶‍♂️ 総消費カロリー (TDEE): <strong class="text-danger">[[${session.loginUser.tdee}]]</strong> kcal
-			</p>
-
-			<p>
-				🥗 目標摂取カロリー: <strong>[[${session.loginUser.calorieGoal}]]</strong> kcal<br>
-				🍽️ 本日の摂取合計: <strong th:text="${totalCalorie}">0</strong> kcal
-			</p>
-
-			<p>
-				📆 減量開始日: <strong>[[${session.loginUser.startDate}]]</strong><br>
-				🎯 目標達成日: <strong>[[${session.loginUser.goalDate}]]</strong><br>
-				🗓️ 目標日数: <strong>[[${session.loginUser.targetDays}]]</strong> 日
-			</p>
-
-			<p th:if="${totalCalorie > session.loginUser.tdee}" class="text-danger fw-bold">
-				⚠️ 本日の摂取カロリーがTDEEを超えています！
-			</p>
-			<p th:unless="${totalCalorie > session.loginUser.tdee}" class="text-success fw-bold">
-				✅ 本日の摂取カロリーは目標内です！
-			</p>
-		</div>
-
 		<!-- カレンダーの表示 -->
 		<div class="container mt-4">
 			<div id="calendar"></div>
@@ -282,6 +264,30 @@
 					</div>
 				</div>
 			</div>
+		</div>
+
+		<div class="alert alert-info">
+			<p>
+				🎯 目標体重: <strong>[[${session.loginUser.goalWeightKg}]]</strong> kg<br>
+				📊 理想体重 (BMI22): <strong>[[${session.loginUser.idealWeightKg}]]</strong> kg<br>
+				📉 現在との差分: <strong>[[${session.loginUser.weightDiffKg}]]</strong> kg
+			</p>
+
+			<p>
+				🔥 基礎代謝 (BMR): <strong>[[${session.loginUser.bmr}]]</strong> kcal<br>
+				🚶‍♂️ 総消費カロリー (TDEE): <strong class="text-danger">[[${session.loginUser.tdee}]]</strong> kcal
+			</p>
+
+			<p>
+				🥗 目標摂取カロリー: <strong>[[${session.loginUser.calorieGoal}]]</strong> kcal<br>
+				🍽️ 本日の摂取合計: <strong th:text="${totalCalorie}">0</strong> kcal
+			</p>
+
+			<p>
+				📆 減量開始日: <strong>[[${session.loginUser.startDate}]]</strong><br>
+				🎯 目標達成日: <strong>[[${session.loginUser.goalDate}]]</strong><br>
+				🗓️ 目標日数: <strong>[[${session.loginUser.targetDays}]]</strong> 日
+			</p>
 		</div>
 
 
@@ -700,7 +706,9 @@
 				renderExercisePage();
 			});
 		</script>
-
+		<script th:inline="javascript">
+			const tdee = /*[[${session.loginUser.tdee}]]*/ 0;
+		</script>
 		<script>
 			$(document).ready(function () {
 				$('#calendar').fullCalendar({
@@ -712,9 +720,9 @@
 						right: 'month'
 					},
 					height: 'auto',  // 高さを自動にする
-					contentHeight: 'auto',       // ✅ 内容に応じて高さを自動調整
-					fixedWeekCount: false,       // ✅ 投稿がない週は描画しない（＝カレンダーの高さが詰まる
-					displayEventTime: false,  // ← ★これが v3 の正しい指定方法
+					contentHeight: 'auto',
+					fixedWeekCount: false,
+					displayEventTime: false,
 					events: {
 						url: '/api/events/all'
 					},
@@ -727,13 +735,22 @@
 					eventRender: function (event, element) {
 						const startHour = moment(event.start).hour();
 
-						// 背景色
-						let bgColor = '';
-						if (startHour >= 5 && startHour < 11) bgColor = '#e0f7fa';
-						else if (startHour >= 11 && startHour < 15) bgColor = '#fff3e0';
-						else if (startHour >= 15 && startHour < 21) bgColor = '#c8e6c9';
-						else bgColor = '#f8bbd0';
+						// 共通色（エクササイズなど）
+						let bgColor = '#FFCCCC';
 
+						// カラークラス → 背景色マップ（一覧と一致）
+						const colorMap = {
+							'bg-morning': '#e0f7fa',
+							'bg-lunch': '#fff3e0',
+							'bg-dinner': '#AAAAFF',
+							'bg-late-night': '#8888ff'
+						};
+						// 🍽️ 食事投稿には時間帯に応じて色を設定
+						if ( event.calorie > 0 ){
+							const timeClass = getMealTimeClass(startHour);
+							bgColor = colorMap[timeClass] || bgColor;
+						}
+						
 						element.css({
 							'background-color': bgColor,
 							'color': '#000',
@@ -743,23 +760,90 @@
 						});
 
 						element.find('.fc-title').html('');
-
 						let html = '';
-						if (event.photoPath) {
+						if (event.calorie) { // カロリー表示（先頭）
+							const calorieStr = parseFloat(event.calorie).toString();
+							html += `<span style="font-weight: bold;">${calorieStr}:</span>`;
+						}
+						if (event.photoPath) { // 画像（次に）
 							html += `<img src="/${event.photoPath}" width="30" height="30" style="border-radius:4px;" /> `;
 						}
-
-						if (event.calorie) {
-							const calorieStr = parseFloat(event.calorie).toString();
-							html += `<span style="font-weight: bold;">${calorieStr}</span>`;
-						}
-						html += `<span> :${event.title}</span>`;
-
+						html += `<span>${event.title}</span>`; // タイトル（最後）
 						element.find('.fc-title').append(html);
+					},
+
+					eventAfterAllRender: function (view) {
+						const events = $('#calendar').fullCalendar('clientEvents');
+						dailyCalories = {};
+
+						events.forEach(event => {
+							const date = moment(event.start).format('YYYY-MM-DD');
+							const calorie = parseFloat(event.calorie) || 0;
+							if (!dailyCalories[date]) dailyCalories[date] = 0;
+							dailyCalories[date] += calorie;
+						});
+
+						// 本日分を抽出
+						const today = moment().format('YYYY-MM-DD');
+						const todayTotal = dailyCalories[today] || 0;
+						const remaining = tdee - todayTotal;
+						const remainingStr = remaining.toFixed(0); // 小数不要なら
+
+						const summaryElem = document.getElementById("calorieSummaryToday");
+
+						const displayText = remaining >= 0
+							? `残り ${remainingStr} kcal`
+							: `超過 ${Math.abs(remainingStr)} kcal`;
+
+						summaryElem.textContent = displayText;
+						summaryElem.classList.remove("text-primary", "text-danger");
+						summaryElem.classList.add(remaining >= 0 ? "text-primary" : "text-danger");
+
+						// 日付別ログ（任意）
+						for (const date in dailyCalories) {
+							const total = dailyCalories[date];
+							if (total > tdee) {
+								//console.warn(`⚠️ ${date} の合計カロリーがTDEEを超過：${total} kcal > ${tdee}`);
+							} else {
+								//console.log(`✅ ${date} は目標内：${total} kcal`);
+							}
+						}
+
+						Object.keys(dailyCalories).forEach(date => {
+							const total = dailyCalories[date];
+							const $cell = $(`.fc-day-top[data-date="${date}"]`);
+
+							if (!$cell.length || date > today) return;
+
+							const diff = Math.round(total - tdee); // 差分（超過なら＋、不足なら−）
+							const $dayNumber = $cell.find('.fc-day-number');
+
+							if (!$dayNumber.length || $dayNumber.hasClass('over-processed')) return;
+
+							const originalDay = $dayNumber.text().trim();
+
+							if (diff > 0) {
+								// 🔺 超過（赤）
+								$cell.css('background-color', '#ffe6e6');
+								$dayNumber
+									.addClass('over-processed')
+									.html(`
+				<span style="color:red; font-weight:bold;">(+${diff})</span>
+				<span>${originalDay}</span>
+			`);
+							} else if (diff < 0) {
+								// 🔻 減量成功（緑）
+								$cell.css('background-color', '#e0f7fa');
+								$dayNumber
+									.addClass('over-processed')
+									.html(`
+				<span style="color:green; font-weight:bold;">(${diff})</span>
+				<span>${originalDay}</span>
+			`);
+							}
+						});
 					}
 				});
-
-
 			});
 		</script>
 </body>
