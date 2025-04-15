@@ -55,73 +55,77 @@ public class MealPostController {
 	@Autowired
 	private NutritionFoodMapper nutritionFoodMapper;
 
-
 	@Autowired
 	private ExercisePostMapper exercisePostMapper;
-	
+
 	//保存処理
 	@PostMapping("/mealPosts/save")
 	public String saveMealPost(@Valid @ModelAttribute("mealPost") MealPost mealPost,
-	                           BindingResult bindingResult,
-	                           @RequestParam("photoFile") MultipartFile photoFile,
-	                           @RequestParam(value = "action", required = false) String action,
-	                           HttpSession session,
-	                           Model model) throws Exception {
+			BindingResult bindingResult,
+			@RequestParam("photoFile") MultipartFile photoFile,
+			@RequestParam(value = "action", required = false) String action,
+			HttpSession session,
+			Model model) throws Exception {
 
-	    User loginUser = (User) session.getAttribute("loginUser");
-	    if (loginUser == null) {
-	        return "redirect:/login";
-	    }
+		User loginUser = (User) session.getAttribute("loginUser");
+		if (loginUser == null) {
+			return "redirect:/login";
+		}
 
-	    // 💥 バリデーションエラーがある場合、フォームに戻す
-	    if (bindingResult.hasErrors()) {
-	        // 💡 画像パスが null なら、既存の値を再設定（エラーで飛ばされたとき消えないように）
-	        if (mealPost.getId() != null && (mealPost.getPhotoPath() == null || mealPost.getPhotoPath().isEmpty())) {
-	            MealPost existing = mealPostMapper.selectById(mealPost.getId());
-	            if (existing != null) {
-	                mealPost.setPhotoPath(existing.getPhotoPath());
-	            }
-	        }
+		mealPost.setUserId(loginUser.getId());
 
-	        model.addAttribute("pageMessage", "入力に誤りがあります");
-	        model.addAttribute("nutritionFoods", nutritionFoodMapper.selectAll());
-	        model.addAttribute("mealPostIngredients", mealPostIngredientMapper.selectByMealPostId(mealPost.getId()));
-	        return "mealposts/detail";
-	    }
+		// 1️⃣ 画像アップロード（先に処理して photoPath をセット）
+		if (!photoFile.isEmpty()) {
+			String filename = UUID.randomUUID().toString() + "_" + photoFile.getOriginalFilename();
+			File destFile = new File(uploadPath, filename);
+			photoFile.transferTo(destFile);
+			mealPost.setPhotoPath("uploads/" + filename);
+		}
 
-	    // 📸 写真アップロード処理
-	    if (!photoFile.isEmpty()) {
-	        String filename = UUID.randomUUID().toString() + "_" + photoFile.getOriginalFilename();
-	        File destFile = new File(uploadPath, filename);
-	        photoFile.transferTo(destFile);
-	        mealPost.setPhotoPath("uploads/" + filename);
-	    } else if (mealPost.getId() != null) {
-	        MealPost existing = mealPostMapper.selectById(mealPost.getId());
-	        if (existing != null && existing.getPhotoPath() != null) {
-	            mealPost.setPhotoPath(existing.getPhotoPath());
-	        }
-	    }
+		// 2️⃣ 新規投稿の場合、先に insert → IDを取得（バリデーション前に必要な処理があるため）
+		if (mealPost.getId() == null) {
+			mealPostService.addMealPost(mealPost);
 
-	    mealPost.setUserId(loginUser.getId());
+			// insert後、idがnullなら再取得（MyBatisの自動生成が効かない場合）
+			if (mealPost.getId() == null) {
+				MealPost inserted = mealPostMapper.findLatestByUserId(loginUser.getId());
+				if (inserted != null) {
+					mealPost.setId(inserted.getId());
+				}
+			}
+		}
 
-	    if (mealPost.getId() == null) {
-	        mealPostService.addMealPost(mealPost);
-	    } else {
-	        mealPostService.editMealPost(mealPost);
-	    }
+		// 3️⃣ バリデーションチェック
+		if (bindingResult.hasErrors()) {
+			// 登録済み画像を再表示するための処理
+			if (mealPost.getId() != null && (mealPost.getPhotoPath() == null || mealPost.getPhotoPath().isEmpty())) {
+				MealPost existing = mealPostMapper.selectById(mealPost.getId());
+				if (existing != null) {
+					mealPost.setPhotoPath(existing.getPhotoPath());
+				}
+			}
 
-	    // 💾 保存のみ
-	    if ("saveOnly".equals(action)) {
-	        MealPost updated = mealPostMapper.selectById(mealPost.getId());
-	        model.addAttribute("mealPost", updated);
-	        model.addAttribute("nutritionFoods", nutritionFoodMapper.selectAll());
-	        model.addAttribute("mealPostIngredients", mealPostIngredientMapper.selectByMealPostId(mealPost.getId()));
-	        model.addAttribute("pageMessage", "食事情報を保存しました");
-	        return "mealposts/detail";
-	    }
+			model.addAttribute("pageMessage", "入力に誤りがあります");
+			model.addAttribute("nutritionFoods", nutritionFoodMapper.selectAll());
+			model.addAttribute("mealPostIngredients", mealPostIngredientMapper.selectByMealPostId(mealPost.getId()));
+			return "mealposts/detail";
+		}
 
-	    // ✅ 戻る
-	    return "redirect:/mealposts";
+		// 4️⃣ 保存処理（insert 済みなら update）
+		mealPostService.editMealPost(mealPost);
+
+		// 5️⃣ 保存のみ
+		if ("saveOnly".equals(action)) {
+			MealPost updated = mealPostMapper.selectById(mealPost.getId());
+			model.addAttribute("mealPost", updated);
+			model.addAttribute("nutritionFoods", nutritionFoodMapper.selectAll());
+			model.addAttribute("mealPostIngredients", mealPostIngredientMapper.selectByMealPostId(mealPost.getId()));
+			model.addAttribute("pageMessage", "食事情報を保存しました");
+			return "mealposts/detail";
+		}
+
+		// 6️⃣ 完了：一覧へ
+		return "redirect:/mealposts";
 	}
 
 	//食事投稿追加処理
@@ -145,10 +149,10 @@ public class MealPostController {
 		if (loginUser == null) {
 			return "redirect:/login";
 		}
-		
+
 		List<ExercisePost> exercisePosts = exercisePostMapper.findByUserId(loginUser.getId());
 		model.addAttribute("exercisePosts", exercisePosts);
-		
+
 		List<MealPost> posts;
 		if (loginUser.getTypeId() == 3) { //運営モード
 			posts = mealPostService.getMealPostList();
@@ -182,7 +186,7 @@ public class MealPostController {
 			// DB上のphotoPathをnullに更新
 			post.setPhotoPath(null);
 			mealPostMapper.update(post);
-			
+
 			redirectAttributes.addFlashAttribute("pageMessage", "画像を削除しました");
 		}
 		return "redirect:/mealPosts/edit/" + id;
@@ -215,15 +219,23 @@ public class MealPostController {
 	@ResponseBody
 	public ResponseEntity<String> updateIngredients(@RequestBody List<MealPostIngredient> ingredients) {
 		if (ingredients == null || ingredients.isEmpty()) {
-			return ResponseEntity.badRequest().body("空のデータです");
+			return ResponseEntity.badRequest().body("データが不正です");
 		}
 
-		Integer mealPostId = ingredients.get(0).getMealPostId();
+		Integer mealPostId = ingredients.get(0).getMealPostId(); // ダミーから取得OK
 
-		// 一度削除してから再登録（シンプルな方式）
+		if (mealPostId == null) {
+			return ResponseEntity.badRequest().body("mealPostId が不明です");
+		}
+
+		// 全削除して…
 		mealPostIngredientMapper.deleteByMealPostId(mealPostId);
+
+		// 新しいものを登録（空なら何もしない）
 		for (MealPostIngredient ing : ingredients) {
-			mealPostIngredientMapper.insert(ing);
+			if (ing.getNutritionFoodId() != null && ing.getAmountGrams() != null) {
+				mealPostIngredientMapper.insert(ing);
+			}
 		}
 
 		return ResponseEntity.ok("登録完了");

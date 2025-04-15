@@ -76,7 +76,7 @@
 						<label>総重量 (g)：</label>
 						<input type="number" th:field="*{totalGrams}" step="0.1" class="form-control">
 						<div class="text-danger" th:errors="*{totalGrams}"></div>
-						
+
 					</div>
 				</div>
 				<div class="row">
@@ -372,6 +372,12 @@
 		function submitIngredients() {
 			const postId = /*[[${mealPost.id}]]*/ 0;
 
+			// 🔒 IDが未設定なら保存前 → 食材登録不可
+			if (!postId || postId === 0) {
+				alert("⚠️ 先に食事投稿を保存してください");
+				return;
+			}
+
 			const rows = Array.from(document.querySelectorAll('#ingredientTable tr'))
 				.filter(row => row.querySelector('select')); // 合計行を除く
 
@@ -385,6 +391,11 @@
 					amountGrams
 				};
 			});
+
+			// 0件の場合でも mealPostId だけ送って削除できるようにする
+			if (ingredients.length === 0) {
+				ingredients.push({mealPostId: postId});
+			}
 
 			console.log("🔄 送信データ:", ingredients);
 
@@ -405,7 +416,7 @@
 				})
 				.catch(err => {
 					console.error("❌ 保存に失敗しました", err);
-					alert("⚠️ 保存に失敗しました");
+					alert("⚠️ 食材情報の保存に失敗しました");
 				});
 		}
 	</script>

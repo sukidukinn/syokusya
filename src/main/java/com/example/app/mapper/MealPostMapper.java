@@ -18,4 +18,6 @@ public interface MealPostMapper {
 	List<MealPost> findByUserId(Integer userId) throws Exception;
 
 	void softDeleteById(Integer id) throws Exception;
+	
+	MealPost findLatestByUserId(Integer userId) throws Exception;
 }

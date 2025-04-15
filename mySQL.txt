@@ -1,0 +1,206 @@
+-- テーブル構築とサンプルデータ挿入
+CREATE TABLE meal_post_types (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
+);
+INSERT INTO user_types (id, name) VALUES
+(1, '通常会員'),
+(2, 'プレミアム会員'),
+(3, '運営'),
+(4, '退会');
+
+CREATE TABLE user_types (
+    id INT PRIMARY KEY,            -- 1～4
+    name VARCHAR(50) NOT NULL      -- 通常会員 / プレミアム会員 / 運営 / 退会
+);
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    age INT,
+    address VARCHAR(255),
+    type_id INT,                              -- 会員種別（1:通常, 2:プレミアムなど）
+    sex INT NOT NULL,                         -- 性別（0:男性, 1:女性, 2:その他）
+    height_cm INT,                            -- 身長（cm）
+    weight_kg INT,                            -- 体重（kg）
+    goal_weight_kg INT DEFAULT NULL,          -- 目標体重（kg）
+    bmi DECIMAL(5,2) DEFAULT NULL,            -- BMI（Java側で計算して保存）
+    bmr DECIMAL(6,2) DEFAULT NULL,            -- 基礎代謝（Java側で計算して保存）
+    activity_level DECIMAL(3,2) DEFAULT 1.2,  -- 活動レベル（係数）
+    bio TEXT,                                 -- 自己紹介
+    deleted BOOLEAN DEFAULT FALSE,            -- 論理削除フラグ
+    created DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+select * from users;
+INSERT INTO users 
+(name, age, address, type_id, sex, height_cm, weight_kg, goal_weight_kg, bmi, bmr, activity_level, bio, deleted) 
+VALUES
+('佐藤 太郎', 28, '東京都新宿区', 1, 0, 172, 65, 63, 21.97, 1603.6, 1.55, 'ジムに週3通ってます。', FALSE),
+('鈴木 花子', 31, '神奈川県横浜市', 2, 1, 160, 50, 48, 19.53, 1314.7, 1.375, '朝食に気を使っています。', FALSE),
+('高橋 健一', 45, '大阪府大阪市', 1, 0, 175, 78, 75, 25.47, 1708.7, 1.2, '在宅勤務で運動不足気味。', FALSE),
+('伊藤 美咲', 24, '愛知県名古屋市', 1, 1, 158, 46, 45, 18.43, 1283.0, 1.375, 'カロリー計算頑張ってます。', FALSE),
+('渡辺 勇人', 35, '北海道札幌市', 3, 0, 180, 85, 80, 26.23, 1852.3, 1.725, '開発チームの管理者です。', FALSE),
+('山本 優奈', 29, '福岡県福岡市', 2, 1, 162, 52, 50, 19.81, 1356.5, 1.2, '週末はジョギングします。', FALSE),
+('中村 海斗', 38, '兵庫県神戸市', 1, 0, 168, 70, 68, 24.80, 1596.8, 1.375, '最近ウォーキング始めました。', FALSE),
+('小林 彩', 26, '京都府京都市', 2, 1, 155, 48, 47, 19.97, 1310.4, 1.2, 'ベジタリアンです。', FALSE),
+('加藤 亮', 33, '広島県広島市', 1, 0, 170, 68, 65, 23.53, 1620.4, 1.2, '健康診断に向けて調整中。', FALSE),
+('斉藤 春奈', 22, '千葉県千葉市', 1, 1, 159, 44, 45, 17.39, 1285.5, 1.55, 'カフェ巡りが好きです。', FALSE);
+
+CREATE TABLE meal_posts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    meal_name VARCHAR(255) NOT NULL,
+    meal_time DATETIME NOT NULL,
+    photo_path VARCHAR(255),
+    memo TEXT,
+    total_calorie DECIMAL(6,2),
+    protein_g DECIMAL(6,2),
+    fat_g DECIMAL(6,2),
+    carbohydrate_g DECIMAL(6,2),
+    fiber_g DECIMAL(6,2),
+    salt_g DECIMAL(6,2),
+    cholesterol_mg DECIMAL(6,2),
+    created DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE nutrition_foods (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    food_code INT NOT NULL,               -- 例: 1001
+    food_name VARCHAR(255) NOT NULL,      -- 食品名（例：アマランサス・玄穀）
+    group_code VARCHAR(10),               -- 食品群コード（例：01）
+    group_name VARCHAR(50),               -- 食品群名（例：穀類）
+    energy_kcal DECIMAL(6,2),             -- エネルギー（kcal）
+    protein_g DECIMAL(6,2),               -- タンパク質（g）
+    fat_g DECIMAL(6,2),                   -- 脂質（g）
+    carbohydrate_g DECIMAL(6,2),          -- 炭水化物（g）
+    fiber_g DECIMAL(6,2),                 -- 食物繊維（g）
+    salt_g DECIMAL(6,2),                  -- 食塩相当量（g）
+    cholesterol_mg DECIMAL(6,2),          -- コレステロール（mg）
+    remarks VARCHAR(255)                  -- 備考など
+);
+
+INSERT INTO nutrition_foods (
+    food_code, food_name, group_code, group_name,
+    energy_kcal, protein_g, fat_g, carbohydrate_g,
+    fiber_g, salt_g, cholesterol_mg, remarks
+) VALUES
+( 1001, 'アマランサス・玄穀', '01', '穀類', 343.00, 12.70, 6.00, 64.90, 7.40, 0.00, 0.00, NULL),
+( 1002, 'あわ・精白粒',       '01', '穀類', 346.00, 11.20, 4.40, 69.70, 3.30, 0.00, 0.00, NULL),
+( 1003, 'あわ・あわもち',     '01', '穀類', 210.00, 5.10, 1.30, 45.30, 1.50, 0.00, 0.00, NULL),
+( 1004, 'えんばく・オートミール', '01', '穀類', 350.00, 13.70, 5.70, 69.10, 9.40, 0.00, 0.00, 'オートミール'),
+( 1005, 'おおむぎ・押麦',     '01', '穀類', 343.00, 10.90, 2.10, 72.10, 10.30, 0.00, 0.00, NULL);
+
+
+CREATE TABLE meal_post_ingredients (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    meal_post_id INT NOT NULL,
+    nutrition_food_id INT NOT NULL,
+    amount_grams DECIMAL(6,2) NOT NULL,
+    FOREIGN KEY (meal_post_id) REFERENCES meal_posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (nutrition_food_id) REFERENCES nutrition_foods(id)
+);
+INSERT INTO meal_posts (
+    user_id, meal_name, meal_time, photo_path, memo,
+    total_calorie, total_grams, protein_g, fat_g, carbohydrate_g, fiber_g, salt_g, cholesterol_mg,
+) VALUES
+(1, '朝食 - 和風', '2025-04-01 08:00:00', 'photos/breakfast1.jpg', 'ごはんと味噌汁',
+ 450.0, 450.0, 12.5, 10.2, 60.0, 4.2, 1.1, 35),
+(2, '昼食 - 洋風', '2025-04-01 12:30:00', 'photos/lunch1.jpg', 'パスタとサラダ',
+ 620.5, 450.0, 18.0, 20.0, 75.0, 6.1, 1.3, 50),
+(1, '夕食 - 軽め', '2025-04-01 18:45:00', 'photos/dinner1.jpg', '鶏むねと野菜',
+ 480.2, 450.0, 25.3, 8.0, 40.0, 5.0, 0.9, 40),
+(3, '朝食 - パン系', '2025-04-02 07:50:00', 'photos/breakfast2.jpg', 'パンと卵',
+ 530.0, 450.0, 16.2, 22.0, 55.0, 3.0, 1.0, 60),
+(2, '昼食 - 和食定食', '2025-04-02 12:20:00', 'photos/lunch2.jpg', 'サバ味噌とご飯',
+ 710.0, 450.0, 28.5, 25.2, 65.0, 4.8, 2.0, 80),
+(4, '夕食 - がっつり', '2025-04-02 19:00:00', 'photos/dinner2.jpg', 'ステーキと米',
+ 850.0, 450.0, 35.0, 35.0, 70.0, 5.5, 2.1, 95),
+(1, '間食 - おやつ', '2025-04-02 15:30:00', 'photos/snack1.jpg', 'チョコバーとコーヒー',
+ 310.0, 450.0, 3.5, 18.5, 32.0, 0.5, 0.6, 15),
+(3, '朝食 - ヘルシー', '2025-04-03 08:15:00', 'photos/breakfast3.jpg', 'オートミール',
+ 380.0, 450.0, 14.0, 6.0, 50.0, 6.2, 0.4, 12),
+(2, '昼食 - サンド系', '2025-04-03 13:00:00', 'photos/lunch3.jpg', 'ツナサンドとスープ',
+ 560.0, 450.0, 20.1, 15.5, 55.0, 3.2, 1.1, 40),
+(4, '夕食 - 野菜多め', '2025-04-03 19:15:00', 'photos/dinner3.jpg', '鍋料理とご飯',
+ 670.5, 450.0, 24.0, 18.2, 60.0, 7.3, 1.5, 38);
+ 
+ 
+ALTER TABLE meal_posts ADD COLUMN deleted BOOLEAN DEFAULT FALSE;
+ALTER TABLE meal_post_ingredients ADD COLUMN deleted BOOLEAN DEFAULT FALSE;
+ALTER TABLE meal_posts ADD COLUMN total_grams DECIMAL(10,2);
+
+DELETE FROM nutrition_foods;
+INSERT INTO nutrition_foods (
+    food_code, food_name, group_code, group_name,
+    energy_kcal, protein_g, fat_g, carbohydrate_g,
+    fiber_g, salt_g, cholesterol_mg, remarks
+) VALUES
+(2001, 'テスト食品1', '99', 'テスト群', 100.0, 5.0, 2.0, 20.0, 1.0, 0.1, 5.0, '自動生成');
+
+ALTER TABLE users
+ADD COLUMN ideal_weight_kg DECIMAL(5,2) AFTER goal_weight_kg,
+ADD COLUMN weight_diff_kg DECIMAL(5,2) AFTER ideal_weight_kg,
+ADD COLUMN tdee DECIMAL(6,2) AFTER bmr,
+ADD COLUMN calorie_goal INT AFTER tdee,
+ADD COLUMN target_days INT AFTER calorie_goal,
+ADD COLUMN start_date DATE AFTER target_days,
+ADD COLUMN goal_date DATE AFTER start_date,
+ADD COLUMN progress_photo_path VARCHAR(255) AFTER goal_date,
+ADD COLUMN last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created;
+
+
+CREATE TABLE exercise_posts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,                              -- ユーザーID（外部キー）
+    
+    exercise_name VARCHAR(100) NOT NULL,               -- 運動名（例：スクワット）
+    body_part VARCHAR(50),                             -- 対象部位（例：足、腹筋、全身）
+    duration_minutes INT,                              -- 運動時間（分）
+    repetition_count INT,                              -- 回数（例：10回）
+    set_count INT,                                     -- セット数（例：3セット）
+    intensity_level VARCHAR(50),                       -- 強度（例：中、高 など）
+    
+    calorie_burned INT NOT NULL,                       -- 推定消費カロリー
+    memo TEXT,                                         -- 補足メモ
+    
+    exercise_time DATETIME NOT NULL,                   -- 実施日時
+    photo_path VARCHAR(255),                           -- 投稿写真パス（例：uploads/abc.jpg）
+
+    deleted BOOLEAN DEFAULT FALSE,                     -- 論理削除フラグ
+    created DATETIME DEFAULT CURRENT_TIMESTAMP,        -- 作成日時
+    updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- 情報表示
+SHOW TABLES;
+select * from meal_post_ingredients;
+select * from meal_post_types;
+select * from meal_posts;
+select * from nutrition_foods;
+select * from user_types;
+select * from users;
+select * from exercise_posts;
+select * from meal_posts;
+
+-- 削除フラグを戻す
+UPDATE meal_posts SET deleted = false WHERE deleted = true;
+UPDATE users SET deleted = false WHERE deleted = true;
+UPDATE users SET type_id = 1 WHERE type_id = 4;
+UPDATE meal_post_ingredients SET deleted = false WHERE deleted = true;
+
+-- 物理削除
+
+
+
+
+
+
+
+
+
+
+
+

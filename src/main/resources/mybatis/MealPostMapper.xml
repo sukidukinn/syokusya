@@ -9,10 +9,19 @@
 		SELECT *
 		FROM meal_posts
 		WHERE user_id = #{userId}
-		AND deleted = FALSE
+		AND deleted
+		= FALSE
 		ORDER BY meal_time DESC
 	</select>
-	
+	<select id="findLatestByUserId" parameterType="int"
+		resultType="MealPost">
+		SELECT *
+		FROM meal_posts
+		WHERE user_id = #{userId}
+		AND deleted = FALSE
+		ORDER BY created DESC
+		LIMIT 1
+	</select>
 	<!-- 一覧取得 -->
 	<select id="selectAll" resultType="MealPost">
 		SELECT
@@ -50,13 +59,16 @@
 		total_calorie,
 		total_grams,
 		protein_g, fat_g, carbohydrate_g,
-		fiber_g, salt_g, cholesterol_mg,
+		fiber_g, salt_g,
+		cholesterol_mg,
 		created
 		) VALUES
 		(
-		#{userId}, #{mealName}, #{mealTime}, #{photoPath},
+		#{userId}, #{mealName}, #{mealTime},
+		#{photoPath},
 		#{memo},
-		#{totalCalorie}, #{totalGrams}, #{proteinG}, #{fatG},
+		#{totalCalorie}, #{totalGrams}, #{proteinG},
+		#{fatG},
 		#{carbohydrateG},
 		#{fiberG}, #{saltG}, #{cholesterolMg}, NOW()
 		)
