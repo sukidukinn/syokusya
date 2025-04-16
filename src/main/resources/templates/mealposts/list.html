@@ -134,15 +134,20 @@
 </head>
 
 <body>
+
+
 	<div id="fixed-header" class="d-flex align-items-center justify-content-between px-4">
-		<div class="d-flex align-items-center gap-4 flex-wrap">
+		<div th:if="${session.loginUser != null}" class="d-flex align-items-center gap-4 flex-wrap">
 			<img th:if="${session.loginUser.photoPath != null}"
 				th:src="@{'/uploads/' + ${#strings.substringAfter(session.loginUser.photoPath, 'uploads/')}}"
 				alt="プロフィール画像" width="50" height="50" class="rounded-circle border" />
 			<span>[[${session.loginUser.nickname}]] さん！ 今日も頑張りましょう！</span>
-			<span>🔥TDEE: <strong>[[${session.loginUser.tdee}]]</strong>kcal</span>
+			<span>🔥TDEE(体重維持): <strong>[[${session.loginUser.tdee}]]</strong> kcal</span>
+			<span id="goalCalorieMessage" class="text-success small"></span>
 			<span id="calorieSummaryToday" class="fw-bold align-middle"></span>
 		</div>
+
+
 		<div class="d-flex align-items-center gap-2">
 			<a class="btn btn-sm btn-outline-secondary" th:href="@{/profile}">プロフィール</a>
 			<a class="btn btn-sm btn-secondary" th:href="@{/logout}">ログアウト</a>
@@ -280,7 +285,6 @@
 
 			<p>
 				🥗 目標摂取カロリー: <strong>[[${session.loginUser.calorieGoal}]]</strong> kcal<br>
-				🍽️ 本日の摂取合計: <strong th:text="${totalCalorie}">0</strong> kcal
 			</p>
 
 			<p>
@@ -708,6 +712,16 @@
 		</script>
 		<script th:inline="javascript">
 			const tdee = /*[[${session.loginUser.tdee}]]*/ 0;
+			const weightDiffKg = /*[[${session.loginUser.weightDiffKg}]]*/ 0;
+			const targetDays = /*[[${session.loginUser.targetDays}]]*/ 1;
+
+			// 💡 減量カロリー目安：1kg減＝7700kcal
+			const goalCaloriePerDay = Math.round((weightDiffKg * 7700) / Math.max(targetDays, 1));
+			const targetIntakeCalorie = tdee - goalCaloriePerDay;
+			document.getElementById("goalCalorieMessage").textContent =
+				`目標体重 ${targetIntakeCalorie} kcal /日`;
+			document.getElementById("dailyGoalCalorie").textContent =
+				`目標体重 -${goalCaloriePerDay} kcal`;
 		</script>
 		<script>
 			$(document).ready(function () {
@@ -746,11 +760,11 @@
 							'bg-late-night': '#8888ff'
 						};
 						// 🍽️ 食事投稿には時間帯に応じて色を設定
-						if ( event.calorie > 0 ){
+						if (event.calorie > 0) {
 							const timeClass = getMealTimeClass(startHour);
 							bgColor = colorMap[timeClass] || bgColor;
 						}
-						
+
 						element.css({
 							'background-color': bgColor,
 							'color': '#000',
@@ -786,7 +800,7 @@
 						// 本日分を抽出
 						const today = moment().format('YYYY-MM-DD');
 						const todayTotal = dailyCalories[today] || 0;
-						const remaining = tdee - todayTotal;
+						const remaining = targetIntakeCalorie - todayTotal; //tdee → targetIntakeCalorie
 						const remainingStr = remaining.toFixed(0); // 小数不要なら
 
 						const summaryElem = document.getElementById("calorieSummaryToday");
@@ -815,7 +829,7 @@
 
 							if (!$cell.length || date > today) return;
 
-							const diff = Math.round(total - tdee); // 差分（超過なら＋、不足なら−）
+							const diff = Math.round(total - targetIntakeCalorie); // 差分tdee → targetIntakeCalorie
 							const $dayNumber = $cell.find('.fc-day-number');
 
 							if (!$dayNumber.length || $dayNumber.hasClass('over-processed')) return;
@@ -827,8 +841,8 @@
 								$cell.css('background-color', '#ffe6e6');
 								$dayNumber
 									.addClass('over-processed')
-									.html(`
-				<span style="color:red; font-weight:bold;">(+${diff})</span>
+									.html(`<span style="color:black; font-weight:bold;">${total}</span>
+				 <span style="color:red; font-weight:bold;">(+${diff})</span>
 				<span>${originalDay}</span>
 			`);
 							} else if (diff < 0) {
@@ -836,7 +850,7 @@
 								$cell.css('background-color', '#e0f7fa');
 								$dayNumber
 									.addClass('over-processed')
-									.html(`
+									.html(`<span style="color:black; font-weight:bold;">${total}</span>
 				<span style="color:green; font-weight:bold;">(${diff})</span>
 				<span>${originalDay}</span>
 			`);
