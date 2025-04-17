@@ -113,6 +113,20 @@
 			}
 		}
 
+		@media screen and (max-width: 1000px) {
+			.table-striped th:nth-child(3),
+			.table-striped th:nth-child(6),
+			.table-striped th:nth-child(7),
+			.table-striped th:nth-child(8),
+
+			.table-striped td:nth-child(3),
+			.table-striped td:nth-child(6),
+			.table-striped td:nth-child(7),
+			.table-striped td:nth-child(8) {
+				display: none;
+			}
+		}
+
 		#fixed-header {
 			position: fixed;
 			top: 0;
@@ -719,7 +733,7 @@
 			const goalCaloriePerDay = Math.round((weightDiffKg * 7700) / Math.max(targetDays, 1));
 			const targetIntakeCalorie = tdee - goalCaloriePerDay;
 			document.getElementById("goalCalorieMessage").textContent =
-				`目標体重 ${targetIntakeCalorie} kcal /日`;
+				`目標体重 ${targetIntakeCalorie} kcal `;
 			document.getElementById("dailyGoalCalorie").textContent =
 				`目標体重 -${goalCaloriePerDay} kcal`;
 		</script>

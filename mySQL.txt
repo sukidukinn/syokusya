@@ -190,10 +190,13 @@ UPDATE meal_posts SET deleted = false WHERE deleted = true;
 UPDATE users SET deleted = false WHERE deleted = true;
 UPDATE users SET type_id = 1 WHERE type_id = 4;
 UPDATE meal_post_ingredients SET deleted = false WHERE deleted = true;
+UPDATE exercise_posts SET deleted = false WHERE deleted = true;
 
 -- 物理削除
-
-
+SELECT * FROM meal_posts WHERE deleted = true;
+SELECT * FROM users WHERE deleted = true;
+SELECT * FROM meal_post_ingredients WHERE deleted = true;
+SELECT * FROM exercise_posts WHERE deleted = true;
 
 
 

@@ -144,7 +144,29 @@
 				<label>
 					<input type="checkbox" id="foodFilterEnable" checked>
 					フィルタ反映
-				</label>
+				</label><!-- タグボタン -->
+				<div class="btn-group flex-wrap" role="group" aria-label="Quick Filters">
+					<button type="button" class="btn btn-outline-secondary btn-sm"
+						onclick="setIngredientFilter('米')">米</button>
+					<button type="button" class="btn btn-outline-secondary btn-sm"
+						onclick="setIngredientFilter('肉')">肉</button>
+					<button type="button" class="btn btn-outline-secondary btn-sm"
+						onclick="setIngredientFilter('卵')">卵</button>
+					<button type="button" class="btn btn-outline-secondary btn-sm"
+						onclick="setIngredientFilter('豚')">豚</button>
+					<button type="button" class="btn btn-outline-secondary btn-sm"
+						onclick="setIngredientFilter('牛')">牛</button>
+					<button type="button" class="btn btn-outline-secondary btn-sm"
+						onclick="setIngredientFilter('にわとり')">にわとり</button>
+					<button type="button" class="btn btn-outline-secondary btn-sm"
+						onclick="setIngredientFilter('葉')">葉</button>
+					<button type="button" class="btn btn-outline-secondary btn-sm"
+						onclick="setIngredientFilter('パン')">パン</button>
+					<button type="button" class="btn btn-outline-secondary btn-sm"
+						onclick="setIngredientFilter('豆')">豆</button>
+					<button type="button" class="btn btn-outline-secondary btn-sm"
+						onclick="setIngredientFilter('油')">油</button>
+				</div>
 			</div>
 		</div>
 
@@ -801,6 +823,16 @@
 		window.addEventListener("DOMContentLoaded", () => {
 			renderNutritionFoodsPage("", 1);
 		});
+	</script>
+	<script>
+		function setIngredientFilter(keyword) {
+			const input = document.getElementById("foodFilterInput");
+			input.value = keyword;
+
+			// 🔄 自動でフィルターを反映（イベントをトリガーするなど）
+			const event = new Event('input');
+			input.dispatchEvent(event);
+		}
 	</script>
 </body>
 
